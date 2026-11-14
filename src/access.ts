@@ -4,5 +4,5 @@ import type { Role } from './db/schema'
 export const NEED: Record<string, Role> = {
   '': 'seller', menu: 'seller', today: 'seller', sales: 'seller', return: 'seller', scanner: 'seller',
   stock: 'manager', count: 'manager', products: 'manager', labels: 'manager', tagging: 'manager', reports: 'manager', ct: 'manager',
-  import: 'owner', units: 'owner', backup: 'owner', settings: 'owner', users: 'owner', audit: 'owner',
+  cloud: 'owner', import: 'owner', units: 'owner', backup: 'owner', settings: 'owner', users: 'owner', audit: 'owner',
 }

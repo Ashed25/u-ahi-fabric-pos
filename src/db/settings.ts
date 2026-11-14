@@ -46,7 +46,22 @@ export const DEFAULT_SETTINGS = {
   remnantBelowTenths: 360, // offer remnant when a roll is under 1 ကိုက်
   autoLockMinutes: 5,
   cashCheck: false,
+  // Cloud (this device only, never synced)
+  cloudUrl: '',
+  cloudAnonKey: '',
+  cloudEmail: '',
+  deviceRole: '' as '' | 'primary' | 'viewer', // primary = the shop tablet that sends; viewer = laptop/phone that only reads
+  deviceUuid: '',
+  lastPullSeq: 0,
+  lastSyncAt: 0,
+  lastBackupAt: 0,
 }
+
+/** Settings shared through the cloud; everything else (sale counters, device letter, cloud login, language…) stays per device. */
+export const SHARED_SETTINGS: SettingKey[] = [
+  'shopName', 'shopAddress', 'shopPhone', 'tin', 'units', 'roundStep', 'roundMode', 'paymentMethods', 'ct', 'ctThresholdKs',
+  'receiptEnabled', 'receiptFooter', 'returnPolicy', 'a4Layout', 'remnantBelowTenths', 'cashCheck', 'autoLockMinutes',
+]
 
 export type Settings = typeof DEFAULT_SETTINGS
 export type SettingKey = keyof Settings

@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { backupInfo, download, exportBackup, restoreBackup } from '../db/backup'
 import { Btn, Modal, Screen } from '../ui/kit'
+import { setSetting } from '../db/settings'
 
 export function Backup() {
   const { t } = useTranslation()
@@ -18,6 +19,7 @@ export function Backup() {
       const file = new File([blob], filename, { type: 'application/json' })
       if (navigator.canShare?.({ files: [file] })) await navigator.share({ files: [file], title: filename })
       else download(blob, filename)
+      await setSetting('lastBackupAt', Date.now())
       setMsg({ ok: true, text: t('backup.exported') })
     } catch (e) {
       if ((e as Error).name !== 'AbortError') setMsg({ ok: false, text: String(e) })

@@ -11,7 +11,10 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
-      workbox: { globPatterns: ['**/*.{js,css,html,woff,woff2,png,svg,wasm}'] },
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,woff,woff2,png,jpg,svg,wasm}'],
+        navigateFallbackDenylist: [/guide\.html$/], // the printable guide is its own page, not the app
+      },
       manifest: {
         name: 'ဦးအဟိ အထည်ဆိုင်',
         short_name: 'ဦးအဟိ POS',

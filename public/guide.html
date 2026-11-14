@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="my">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ရောင်းနည်း လမ်းညွှန်</title>
+    <style>
+      :root {
+        --ink: #0f172a;
+        --blue: #1e3a8a;
+        --green: #15803d;
+        --line: #cbd5e1;
+        --paper: #ffffff;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 16px;
+        background: var(--paper);
+        color: var(--ink);
+        font-family: 'Noto Sans Myanmar', 'Myanmar Text', 'Pyidaungsu', system-ui, sans-serif;
+        font-size: 15px;
+        line-height: 1.75;
+      }
+      h1 {
+        margin: 0 0 4px;
+        font-size: 26px;
+        color: var(--blue);
+        text-align: center;
+      }
+      .sub {
+        margin: 0 0 12px;
+        text-align: center;
+        font-size: 15px;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+      }
+      section {
+        border: 2px solid var(--line);
+        border-radius: 14px;
+        padding: 10px 12px;
+        break-inside: avoid;
+      }
+      h2 {
+        margin: 0 0 6px;
+        font-size: 19px;
+      }
+      h2 span {
+        display: inline-block;
+        width: 30px;
+        height: 30px;
+        margin-right: 6px;
+        border-radius: 50%;
+        background: var(--blue);
+        color: #fff;
+        text-align: center;
+        line-height: 30px;
+        font-size: 17px;
+      }
+      img {
+        display: block;
+        width: 100%;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+      }
+      ol {
+        margin: 8px 0 0;
+        padding-left: 22px;
+      }
+      li {
+        margin-bottom: 2px;
+      }
+      b {
+        color: var(--green);
+      }
+      .bar {
+        margin-top: 12px;
+        padding: 10px 12px;
+        border-radius: 14px;
+        background: #fef3c7;
+        font-size: 15px;
+      }
+      .print {
+        display: block;
+        margin: 0 auto 12px;
+        padding: 10px 24px;
+        border: 0;
+        border-radius: 12px;
+        background: var(--blue);
+        color: #fff;
+        font: inherit;
+        font-size: 18px;
+        cursor: pointer;
+      }
+      @media (max-width: 700px) {
+        .grid {
+          grid-template-columns: 1fr;
+        }
+      }
+      @page {
+        size: A4;
+        margin: 8mm;
+      }
+      @media print {
+        body {
+          padding: 0;
+          font-size: 12.5px;
+          line-height: 1.6;
+        }
+        .print {
+          display: none;
+        }
+        h1 {
+          font-size: 22px;
+        }
+        h2 {
+          font-size: 16px;
+        }
+        img {
+          max-height: 52mm;
+          object-fit: cover;
+          object-position: top;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <button class="print" onclick="print()">🖨 ပရင့်ထုတ်ရန်</button>
+    <h1>ဦးအဟိ အထည်ဆိုင် — ရောင်းနည်း</h1>
+    <p class="sub">🔒 စဝင်ရင် ကိုယ့် <b>PIN ဂဏန်း ၄ လုံး</b> ကို နှိပ်ပါ။ မသေချာရင် သားသမီး / ပိုင်ရှင်ကို ခေါ်ပါ။</p>
+
+    <div class="grid">
+      <section>
+        <h2><span>၁</span>အထည် ရောင်းနည်း</h2>
+        <img src="guide/1-scan.jpg" alt="ရောင်းရန် စာမျက်နှာ" />
+        <ol>
+          <li>စာကပ်ပေါ်က <b>ဘားကုဒ်ကို စကန်ဖတ်ပါ</b>။ “တီ” အသံ ကြားရမည်။</li>
+          <li>ပစ္စည်းနဲ့ ဈေး စာရင်းထဲ ပေါ်လာမည်။ နောက်တစ်ထည် ထပ်စကန်ပါ။</li>
+          <li>မှားသွားရင် အနီရောင် <b>“နောက်ဆုံးတစ်ခုဖျက်”</b> ကို နှိပ်ပါ။</li>
+        </ol>
+      </section>
+
+      <section>
+        <h2><span>၂</span>ပိတ်စ ရောင်းနည်း</h2>
+        <img src="guide/2-fabric.jpg" alt="ပိတ်စ အလျား ထည့်ရန်" />
+        <ol>
+          <li>ပိတ်စ ဘားကုဒ်ကို စကန်ဖတ်ပါ။ အလျား ထည့်ရန် စာမျက်နှာ ပွင့်မည်။</li>
+          <li>ဖြတ်မည့် အလျားကို <b>+ ကိုက်</b>၊ <b>+ တောင်</b>၊ <b>+ ထွာ</b> … နှိပ်ပြီး ထည့်ပါ (ဥပမာ ကိုက် ၂ ခါ + ထွာ ၁ ခါ = ၂ ကိုက် ၁ ထွာ)။ မှားရင် <b>−</b>။</li>
+          <li>အောက်မှာ ဈေး ကြီးကြီး ပြမည်။ မှန်ရင် အစိမ်း <b>“အိုကေ”</b>။</li>
+        </ol>
+      </section>
+
+      <section>
+        <h2><span>၃</span>ငွေရှင်းနည်း</h2>
+        <img src="guide/3-pay.jpg" alt="ငွေရှင်းရန်" />
+        <ol>
+          <li>အစိမ်း <b>“ငွေရှင်းရန်”</b> ကို နှိပ်ပါ။</li>
+          <li>ငွေသား — ဖောက်သည် ပေးသော ငွေစက္ကူ ခလုတ် (+၅,၀၀၀ / +၁၀,၀၀၀ / +၂၀,၀၀၀) ကို နှိပ်ပါ။ <b>ပြန်အမ်းငွေ</b> အစိမ်းရောင် ကြီးကြီး ပြမည်။ KBZPay / WavePay ဆိုရင် ထိုခလုတ်ကို ရွေးပါ။</li>
+          <li><b>“ပြီးပြီ”</b> → ပြန်အမ်းငွေ ပေးပြီး → <b>“နောက်တစ်ယောက်”</b>။</li>
+        </ol>
+      </section>
+
+      <section>
+        <h2><span>၄</span>စကန် မဖတ်ရင်</h2>
+        <img src="guide/4-notfound.jpg" alt="ပစ္စည်း မတွေ့ပါ" />
+        <ol>
+          <li>“ဒီပစ္စည်း မတွေ့ပါ” ပြရင် <b>“ဓာတ်ပုံဖြင့် ရွေးရန်”</b> ကို နှိပ်ပါ။</li>
+          <li>ပစ္စည်း <b>ဓာတ်ပုံကို နှိပ်ပါ</b>။ (အပေါ်က ကွက်ထဲမှာ အမည် (သို့) ဘားကုဒ်စာအုပ်က ဂဏန်း ရိုက်ရှာလည်း ရသည်)</li>
+          <li>စာကပ် ပြုတ်နေရင် ပိုင်ရှင်ကို ပြောပါ — စာကပ် အသစ် ထုတ်ပေးမည်။</li>
+        </ol>
+      </section>
+    </div>
+
+    <div class="bar">
+      ⏸ ဖောက်သည် စောင့်ခိုင်းရင် <b>“ခဏထားရန်”</b> · ↩ ပြန်လဲ/ပြန်အမ်း၊ လျှော့ဈေး၊ ပယ်ဖျက် — <b>ပိုင်ရှင် (သို့) မန်နေဂျာ</b> PIN လိုသည် ·
+      🟠 လိမ္မော်ရောင် “လေ့ကျင့်ရန်” စာတန်း ပေါ်နေရင် ရောင်းတာ မမှတ်ပါ — လေ့ကျင့်ရုံသာ။
+    </div>
+  </body>
+</html>

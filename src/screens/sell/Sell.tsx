@@ -15,6 +15,7 @@ import { Btn, Modal, inputCls, toInt } from '../../ui/kit'
 import { roundFraction } from '../../core/pricing'
 import { atLeast } from '../../db/users'
 import { useSession } from '../../session'
+import { SyncBadge } from '../../sync/runner'
 import { Photo } from '../../ui/photo'
 import { ReceiptModal } from '../../ui/ReceiptModal'
 import { go } from '../../ui/router'
@@ -190,6 +191,7 @@ function SellScreen({ settings }: { settings: Settings }) {
             {t('sell.held', { count: held!.length })}
           </Btn>
         )}
+        <SyncBadge />
         <span className="hidden text-lg md:inline">👤 {user?.name}</span>
         <Btn variant="plain" onClick={() => go('#/menu')}>
           ☰ {t('sell.menu')}
@@ -199,6 +201,7 @@ function SellScreen({ settings }: { settings: Settings }) {
         </Btn>
       </header>
       {settings.practiceMode && <div className="bg-orange-500 py-2 text-center text-2xl font-bold text-white">{t('sell.practiceBanner')}</div>}
+      {settings.deviceRole === 'viewer' && <div className="bg-sky-200 py-2 text-center text-xl">👁 {t('cloud.viewerBanner')}</div>}
       {creditCn && !!creditLeftKs && (
         <div className="flex items-center gap-3 bg-violet-100 px-4 py-2 text-xl text-violet-900" data-testid="credit-banner">
           <span className="flex-1">↩ {t('sell.creditBanner', { amount: formatKs(creditLeftKs), id: creditCn })}</span>

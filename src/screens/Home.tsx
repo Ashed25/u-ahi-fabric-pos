@@ -10,6 +10,7 @@ import { CtWarning } from './Reports'
 import { NEED } from '../access'
 import { atLeast } from '../db/users'
 import { useSession } from '../session'
+import { SyncBadge } from '../sync/runner'
 
 const TILES = [
   ['today', '📊', 'today.title'],
@@ -23,6 +24,7 @@ const TILES = [
   ['units', '📏', 'units.title'],
   ['scanner', '🔍', 'scanner.title'],
   ['backup', '💾', 'backup.title'],
+  ['cloud', '☁️', 'cloud.title'],
   ['settings', '⚙️', 'settings.title'],
   ['users', '👥', 'users.title'],
   ['audit', '📜', 'audit.title'],
@@ -55,16 +57,33 @@ export function Home() {
           <Btn variant="plain" onClick={() => setSetting('lang', settings.lang === 'my' ? 'en' : 'my')}>
             {t('lang.toggle')}
           </Btn>
+          <SyncBadge always />
           <Btn variant="plain" onClick={lock}>
             🔒 {t('lock.lock')}
           </Btn>
         </>
       }
     >
-      <div className="mx-auto mb-4 max-w-4xl">
+      <div className="mx-auto mb-4 max-w-4xl space-y-3">
+        {settings.deviceRole === 'viewer' && <p className="rounded-2xl bg-sky-100 p-3 text-xl">👁 {t('cloud.viewerBanner')}</p>}
+        {atLeast(user, 'owner') && Date.now() - settings.lastBackupAt > 86_400_000 && (
+          <button className="block w-full rounded-2xl bg-amber-100 p-3 text-left text-xl" onClick={() => go('#/backup')} data-testid="backup-reminder">
+            💾 {t(settings.lastBackupAt ? 'backup.reminder' : 'backup.reminderNever', { days: Math.floor((Date.now() - settings.lastBackupAt) / 86_400_000) })}
+          </button>
+        )}
         <CtWarning />
       </div>
       <div className="mx-auto grid max-w-4xl grid-cols-2 gap-4 md:grid-cols-3">
+        <a
+          href="guide.html"
+          target="_blank"
+          className="flex min-h-36 flex-col items-center justify-center gap-2 rounded-3xl border-2 border-slate-300 bg-slate-50 p-4 text-2xl font-bold active:bg-slate-200"
+        >
+          <span className="text-5xl" aria-hidden>
+            📖
+          </span>
+          {t('home.guide')}
+        </a>
         {TILES.filter(([route]) => atLeast(user, NEED[route])).map(([route, icon, label]) => (
           <button
             key={route}

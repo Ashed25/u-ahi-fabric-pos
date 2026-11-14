@@ -6,6 +6,8 @@ import { useSettings } from './db/useSettings'
 import { anyUsers, atLeast } from './db/users'
 import { AuditLog } from './screens/AuditLog'
 import { Backup } from './screens/Backup'
+import { Cloud } from './screens/Cloud'
+import { SyncRunner } from './sync/runner'
 import { CtReport } from './screens/CtReport'
 import { Home } from './screens/Home'
 import { Labels } from './screens/Labels'
@@ -42,6 +44,7 @@ export default function App() {
   }, [settings, i18n])
   return (
     <SessionProvider>
+      <SyncRunner />
       <Gate />
     </SessionProvider>
   )
@@ -83,6 +86,8 @@ function route(path: string[]): ReactNode {
       return <Users />
     case 'audit':
       return <AuditLog />
+    case 'cloud':
+      return <Cloud />
     case 'stock':
       return path[1] ? <StockProduct key={path[1]} id={Number(path[1])} /> : <StockList />
     case 'count':
