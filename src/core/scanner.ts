@@ -27,7 +27,8 @@ export class ScanBuffer {
   private last = -Infinity
 
   constructor(
-    private maxGapMs = 50,
+    // 100 ms tolerates Bluetooth jitter; people typing digits are slower than this.
+    private maxGapMs = 100,
     private minLength = 4,
   ) {}
 

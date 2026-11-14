@@ -3,6 +3,9 @@ import { useTranslation } from 'react-i18next'
 import { useSettings } from './db/useSettings'
 import { Backup } from './screens/Backup'
 import { Home } from './screens/Home'
+import { SalesHistory, SaleView } from './screens/SalesHistory'
+import { SettingsScreen } from './screens/SettingsScreen'
+import { Sell } from './screens/sell/Sell'
 import { Labels } from './screens/Labels'
 import { ProductEdit } from './screens/ProductEdit'
 import { Products } from './screens/Products'
@@ -27,6 +30,12 @@ export default function App() {
   }, [settings, i18n])
 
   switch (path[0]) {
+    case 'menu':
+      return <Home />
+    case 'sales':
+      return path[1] ? <SaleView key={path[1]} id={decodeURIComponent(path[1])} /> : <SalesHistory />
+    case 'settings':
+      return <SettingsScreen />
     case 'products':
       if (path[1] === 'new') return <ProductEdit key="new" />
       return path[1] ? <ProductEdit key={path[1]} id={Number(path[1])} /> : <Products />
@@ -47,6 +56,6 @@ export default function App() {
     case 'backup':
       return <Backup />
     default:
-      return <Home />
+      return <Sell />
   }
 }

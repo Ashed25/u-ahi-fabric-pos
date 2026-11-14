@@ -19,7 +19,7 @@ export function Btn({
 
 export function Screen({
   title,
-  back = '#/',
+  back = '#/menu',
   actions,
   children,
 }: {

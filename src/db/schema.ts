@@ -118,6 +118,7 @@ export interface SaleLine {
   lengthTenths?: number
   // snapshots at time of sale
   nameMy: string
+  sub?: string // size · colour, or width
   unitPriceKs: number
   pricingUnit?: string
   unitTenths?: number

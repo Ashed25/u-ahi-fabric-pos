@@ -1,0 +1,99 @@
+import { expect, type Page, test } from '@playwright/test'
+
+async function scan(page: Page, code: string) {
+  await page.keyboard.type(code, { delay: 5 })
+  await page.keyboard.press('Enter')
+}
+
+// Demo barcodes are generated in a fixed order: shirt M is the first, blue silk the 8th.
+const SHIRT_M = '2000000000015'
+const SILK = '2000000000114'
+
+test.beforeEach(async ({ page }) => {
+  await page.goto('/#/menu')
+  await page.getByRole('button', { name: 'နမူနာ ပစ္စည်း ထည့်ရန်' }).click()
+  await expect(page.getByRole('button', { name: 'နမူနာ ပစ္စည်း ဖျက်ရန်' })).toBeVisible()
+  await page.goto('/#/')
+  await expect(page.getByTestId('scan-area')).toBeVisible()
+})
+
+test('sell one shirt + one fabric cut, pay cash, see it in history', async ({ page }) => {
+  await scan(page, SHIRT_M)
+  await expect(page.getByTestId('cart')).toContainText('ရှပ်အင်္ကျီ အဖြူ')
+  await expect(page.getByTestId('total')).toHaveText('15,000')
+
+  // Fabric: 2 ကိုက် 1 မိုက် at 8,000/ကိုက် = 17,000 (rounded to nearest 50)
+  await scan(page, SILK)
+  await page.getByRole('button', { name: /^\+ ကိုက်/ }).click()
+  await page.getByRole('button', { name: /^\+ ကိုက်/ }).click()
+  await page.getByRole('button', { name: /^\+ မိုက်/ }).click()
+  await expect(page.getByTestId('length-price')).toContainText('17,000')
+  await page.getByRole('button', { name: 'အိုကေ' }).click()
+  await expect(page.getByTestId('cart')).toContainText('2 ကိုက် 1 မိုက်')
+  await expect(page.getByTestId('cart')).toContainText('(76.4")')
+  await expect(page.getByTestId('total')).toHaveText('32,000')
+
+  // Pay with two 20,000 notes -> 8,000 change
+  await page.getByRole('button', { name: 'ငွေရှင်းရန်' }).click()
+  await page.getByRole('button', { name: '+ 20,000' }).click()
+  await page.getByRole('button', { name: '+ 20,000' }).click()
+  await expect(page.getByTestId('change')).toHaveText('8,000')
+  await page.getByRole('button', { name: /ပြီးပြီ/ }).click()
+  await expect(page.getByText('ရောင်းပြီးပါပြီ')).toBeVisible()
+  await expect(page.getByText('အရောင်း နံပါတ် A-000001')).toBeVisible()
+  await page.screenshot({ path: 'test-results/sell-done.png' })
+  await page.getByRole('button', { name: 'နောက်တစ်ယောက်' }).click()
+  await expect(page.getByTestId('total')).toHaveText('0')
+
+  // History shows it, with the fabric exactly as entered
+  await page.goto('/#/sales')
+  await expect(page.getByText('အရောင်း 1 ခု — 32,000 ကျပ်')).toBeVisible()
+  await page.getByRole('button', { name: /A-000001/ }).click()
+  await expect(page.getByText('2 ကိုက် 1 မိုက်')).toBeVisible()
+  await expect(page.getByText(/ငွေသား/)).toBeVisible()
+})
+
+test('mixed units stay as entered; remove last; unknown barcode; split payment', async ({ page }) => {
+  await scan(page, SILK)
+  for (let i = 0; i < 3; i++) await page.getByRole('button', { name: /^\+ တောင်/ }).click()
+  await page.getByRole('button', { name: 'အိုကေ' }).click()
+  await expect(page.getByTestId('cart')).toContainText('3 တောင်')
+  await expect(page.getByTestId('total')).toHaveText('12,000')
+
+  await scan(page, SHIRT_M)
+  await scan(page, SHIRT_M)
+  await expect(page.getByTestId('cart')).toContainText('× 2')
+  await page.getByRole('button', { name: 'နောက်ဆုံးတစ်ခုဖျက်' }).click()
+  await expect(page.getByTestId('total')).toHaveText('27,000')
+
+  await scan(page, '99999999')
+  await expect(page.getByText('ဒီပစ္စည်း မတွေ့ပါ — ဓာတ်ပုံဖြင့် ရွေးပါ')).toBeVisible()
+  await page.getByRole('button', { name: 'မလုပ်တော့' }).click()
+  // Regression: the scanner's Enter must not press the focused "remove last" button again.
+  await expect(page.getByTestId('total')).toHaveText('27,000')
+
+  // 20,000 by KBZPay, the rest in cash
+  await page.getByRole('button', { name: 'ငွေရှင်းရန်' }).click()
+  await page.getByRole('button', { name: 'KBZPay' }).click()
+  await page.getByPlaceholder('27,000').fill('20000')
+  await page.getByRole('button', { name: /ကျန်တာ နောက်နည်းနဲ့/ }).click()
+  await expect(page.getByText('ကျန်ငွေ: 7,000')).toBeVisible()
+  await page.getByRole('button', { name: 'ကွက်တိ' }).click()
+  await page.getByRole('button', { name: /ပြီးပြီ/ }).click()
+  await expect(page.getByText('အရောင်း နံပါတ် A-000001')).toBeVisible()
+})
+
+test('practice mode records nothing', async ({ page }) => {
+  await page.goto('/#/settings')
+  await page.getByLabel('လေ့ကျင့်ရန် မုဒ်').check()
+  await page.getByRole('button', { name: 'သိမ်းရန်' }).click()
+  await page.goto('/#/')
+  await expect(page.getByText('လေ့ကျင့်ရန် — အရောင်း မမှတ်ပါ')).toBeVisible()
+  await scan(page, SHIRT_M)
+  await page.getByRole('button', { name: 'ငွေရှင်းရန်' }).click()
+  await page.getByRole('button', { name: 'ကွက်တိ' }).click()
+  await page.getByRole('button', { name: /ပြီးပြီ/ }).click()
+  await expect(page.getByText('လေ့ကျင့်မှု ပြီးပါပြီ (မမှတ်ပါ)')).toBeVisible()
+  await page.goto('/#/sales')
+  await expect(page.getByText('အရောင်း 0 ခု — 0 ကျပ်')).toBeVisible()
+})

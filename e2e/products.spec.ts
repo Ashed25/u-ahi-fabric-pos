@@ -7,8 +7,8 @@ async function scan(page: Page, code: string) {
 }
 
 test('owner adds a fabric and a shirt, links a supplier barcode, scans it, previews labels', async ({ page }) => {
-  await page.goto('/')
-  await expect(page.getByRole('heading', { name: 'ဦးအဟိ အထည်ဆိုင်' })).toBeVisible()
+  await page.goto('/#/menu')
+  await expect(page.getByRole('heading', { name: 'မီနူး' })).toBeVisible()
 
   // Fabric, priced per ကိုက်
   await page.getByRole('button', { name: /ပစ္စည်းများ/ }).click()

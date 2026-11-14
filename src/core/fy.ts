@@ -18,6 +18,12 @@ export function dateKey(ms: number): string {
   return `${p.year}-${String(p.month).padStart(2, '0')}-${String(p.day).padStart(2, '0')}`
 }
 
+/** "14:05" in Yangon time */
+export function timeText(ms: number): string {
+  const d = new Date(ms + OFFSET_MS)
+  return `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`
+}
+
 /** Epoch ms of Yangon midnight for that date. Month/day overflow is allowed (Date.UTC normalises). */
 export function yangonMidnight(year: number, month: number, day: number): number {
   return Date.UTC(year, month - 1, day) - OFFSET_MS

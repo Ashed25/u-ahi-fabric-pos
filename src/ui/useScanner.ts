@@ -17,11 +17,18 @@ function install() {
     'keydown',
     (e) => {
       const code = buffer.feed(e)
-      if (code) stack[stack.length - 1]?.current?.(code)
+      if (!code) return
+      // The scanner's trailing Enter must not also "press" whatever button has focus.
+      e.preventDefault()
+      e.stopPropagation()
+      stack[stack.length - 1]?.current?.(code)
     },
     true,
   )
 }
+
+// Listen from app start, so a scan arriving while a screen is still mounting keeps all its digits.
+if (typeof document !== 'undefined') install()
 
 export function useScanner(handler: Handler) {
   const ref = useRef<Handler>(handler)

@@ -8,6 +8,7 @@ import { Btn, Screen } from '../ui/kit'
 import { go } from '../ui/router'
 
 const TILES = [
+  ['sales', '🧾', 'history.title'],
   ['products', '👕', 'products.title'],
   ['labels', '🏷', 'labels.title'],
   ['tagging', '✅', 'tagging.title'],
@@ -15,6 +16,7 @@ const TILES = [
   ['units', '📏', 'units.title'],
   ['scanner', '🔍', 'scanner.title'],
   ['backup', '💾', 'backup.title'],
+  ['settings', '⚙️', 'settings.title'],
 ] as const
 
 export function Home() {
@@ -33,8 +35,8 @@ export function Home() {
   }
   return (
     <Screen
-      title={settings.shopName}
-      back={null}
+      title={t('sell.menu')}
+      back="#/"
       actions={
         <>
           <Btn variant="plain" onClick={() => setSetting('largeText', !settings.largeText)}>
