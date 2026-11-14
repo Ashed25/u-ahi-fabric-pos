@@ -1,0 +1,32 @@
+import { exportDB, importInto, peakImportFile } from 'dexie-export-import'
+import { dateKey } from '../core/fy'
+import { db } from './schema'
+
+export function download(blob: Blob, filename: string) {
+  const a = document.createElement('a')
+  a.href = URL.createObjectURL(blob)
+  a.download = filename
+  a.click()
+  setTimeout(() => URL.revokeObjectURL(a.href), 10_000)
+}
+
+/** Full backup incl. photos. Also how the laptop gets a copy of the data for label printing. */
+export async function exportBackup(): Promise<{ blob: Blob; filename: string }> {
+  const blob = await exportDB(db)
+  return { blob, filename: `u-ahi-backup-${dateKey(Date.now())}.json` }
+}
+
+export async function backupInfo(file: Blob) {
+  const meta = await peakImportFile(file)
+  if (meta.data.databaseName !== db.name) throw new Error('Not a backup of this app')
+  const count = (t: string) => meta.data.tables.find((x) => x.name === t)?.rowCount ?? 0
+  return { products: count('products'), sales: count('sales') }
+}
+
+/** Replaces ALL data on this device. Downloads a safety copy of the current data first. */
+export async function restoreBackup(file: Blob) {
+  await backupInfo(file) // validates the file before touching anything
+  const safety = await exportBackup()
+  download(safety.blob, safety.filename.replace('backup', 'before-restore'))
+  await importInto(db, file, { clearTablesBeforeImport: true, acceptVersionDiff: true })
+}

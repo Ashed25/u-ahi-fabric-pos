@@ -20,3 +20,21 @@ body {
 button {
   @apply min-h-16 cursor-pointer select-none;
 }
+
+/* Label printing */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  .print-page {
+    break-after: page;
+  }
+}
+@media screen {
+  .label-box {
+    outline: 1px dashed #94a3b8;
+  }
+  .print-page {
+    margin: 8px;
+  }
+}

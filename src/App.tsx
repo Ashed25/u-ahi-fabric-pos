@@ -1,23 +1,52 @@
+import { lazy, Suspense, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useLiveQuery } from 'dexie-react-hooks'
-import { getSetting } from './db/settings'
+import { useSettings } from './db/useSettings'
+import { Backup } from './screens/Backup'
+import { Home } from './screens/Home'
+import { Labels } from './screens/Labels'
+import { ProductEdit } from './screens/ProductEdit'
+import { Products } from './screens/Products'
+import { ScannerTest } from './screens/ScannerTest'
+import { Tagging } from './screens/Tagging'
+import { Units } from './screens/Units'
+import { useRoute } from './ui/router'
+
+// Excel library is large: load only when the Import screen opens.
+const Import = lazy(() => import('./screens/Import').then((m) => ({ default: m.Import })))
 
 export default function App() {
-  const { t, i18n } = useTranslation()
-  const shopName = useLiveQuery(() => getSetting('shopName'))
+  const { i18n } = useTranslation()
+  const settings = useSettings()
+  const { path } = useRoute()
 
-  return (
-    <div className="min-h-dvh flex flex-col">
-      <header className="flex items-center justify-between gap-4 bg-blue-900 px-4 text-white">
-        <h1 className="text-2xl font-bold">{shopName ?? t('app.loading')}</h1>
-        <button
-          className="rounded-xl px-4 text-lg"
-          onClick={() => i18n.changeLanguage(i18n.language === 'my' ? 'en' : 'my')}
-        >
-          {t('lang.toggle')}
-        </button>
-      </header>
-      <main className="flex flex-1 items-center justify-center p-4 text-3xl">{t('app.comingSoon')}</main>
-    </div>
-  )
+  useEffect(() => {
+    if (!settings) return
+    if (i18n.language !== settings.lang) i18n.changeLanguage(settings.lang)
+    document.documentElement.lang = settings.lang
+    document.documentElement.classList.toggle('large-text', settings.largeText)
+  }, [settings, i18n])
+
+  switch (path[0]) {
+    case 'products':
+      if (path[1] === 'new') return <ProductEdit key="new" />
+      return path[1] ? <ProductEdit key={path[1]} id={Number(path[1])} /> : <Products />
+    case 'labels':
+      return <Labels />
+    case 'tagging':
+      return <Tagging />
+    case 'import':
+      return (
+        <Suspense>
+          <Import />
+        </Suspense>
+      )
+    case 'units':
+      return <Units />
+    case 'scanner':
+      return <ScannerTest />
+    case 'backup':
+      return <Backup />
+    default:
+      return <Home />
+  }
 }

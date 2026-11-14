@@ -41,6 +41,7 @@ export interface Product {
   unitPriceKs?: number // length
   widthTenths?: number // length: display only
   quickCuts?: EnteredLength[] // length
+  tagged?: boolean // tagging day: label is on the item
   updatedAt: number
 }
 

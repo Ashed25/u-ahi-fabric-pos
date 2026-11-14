@@ -35,6 +35,8 @@ export const DEFAULT_SETTINGS = {
   returnPolicy: '',
   barcodePrefix: '20',
   barcodeSeq: 0, // last generated; never reused
+  // A4 sticker sheet geometry in mm (default: common 3×8 sheet of 70×37 mm)
+  a4Layout: { cols: 3, rows: 8, wMm: 70, hMm: 37, topMm: 0.5, leftMm: 0, gapXMm: 0, gapYMm: 0 },
   devicePrefix: 'A',
   saleSeq: 0, // last completed sale on this device
   practiceMode: false,
