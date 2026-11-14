@@ -1,0 +1,58 @@
+import { DEFAULT_UNITS } from '../core/units'
+import type { RoundMode } from '../core/pricing'
+import type { CtSettings } from '../core/tax'
+import { db } from './schema'
+
+export interface PaymentMethod {
+  code: string
+  nameMy: string
+  nameEn: string
+  needsRef: boolean
+  active: boolean
+}
+
+export const DEFAULT_SETTINGS = {
+  shopName: 'ဦးအဟိ အထည်ဆိုင်',
+  shopAddress: '',
+  shopPhone: '',
+  tin: '',
+  units: DEFAULT_UNITS,
+  roundStep: 50,
+  roundMode: 'nearest' as RoundMode,
+  paymentMethods: [
+    { code: 'cash', nameMy: 'ငွေသား', nameEn: 'Cash', needsRef: false, active: true },
+    { code: 'kbzpay', nameMy: 'KBZPay', nameEn: 'KBZPay', needsRef: true, active: true },
+    { code: 'wavepay', nameMy: 'WavePay', nameEn: 'WavePay', needsRef: true, active: true },
+    { code: 'ayapay', nameMy: 'AYA Pay', nameEn: 'AYA Pay', needsRef: true, active: true },
+    { code: 'cbpay', nameMy: 'CB Pay', nameEn: 'CB Pay', needsRef: true, active: true },
+    { code: 'card', nameMy: 'MPU / ကတ်', nameEn: 'MPU / card', needsRef: true, active: true },
+    { code: 'bank', nameMy: 'ဘဏ်လွှဲ', nameEn: 'Bank transfer', needsRef: true, active: true },
+  ] as PaymentMethod[],
+  ct: { registered: false, rateBp: 500, inclusive: true } as CtSettings,
+  ctThresholdKs: 50_000_000,
+  receiptEnabled: false,
+  receiptFooter: 'ဝယ်ယူအားပေးမှုအတွက် ကျေးဇူးတင်ပါသည်',
+  returnPolicy: '',
+  barcodePrefix: '20',
+  barcodeSeq: 0, // last generated; never reused
+  devicePrefix: 'A',
+  saleSeq: 0, // last completed sale on this device
+  practiceMode: false,
+  lang: 'my' as 'my' | 'en',
+  largeText: false,
+  remnantBelowTenths: 360, // offer remnant when a roll is under 1 ကိုက်
+  autoLockMinutes: 5,
+  cashCheck: false,
+}
+
+export type Settings = typeof DEFAULT_SETTINGS
+export type SettingKey = keyof Settings
+
+export async function getSetting<K extends SettingKey>(key: K): Promise<Settings[K]> {
+  const row = await db.settings.get(key)
+  return (row ? row.value : DEFAULT_SETTINGS[key]) as Settings[K]
+}
+
+export async function setSetting<K extends SettingKey>(key: K, value: Settings[K]): Promise<void> {
+  await db.settings.put({ key, value })
+}

@@ -1,0 +1,22 @@
+@import 'tailwindcss';
+@import '@fontsource/noto-sans-myanmar/400.css';
+@import '@fontsource/noto-sans-myanmar/700.css';
+
+@theme {
+  --font-sans: 'Noto Sans Myanmar', system-ui, sans-serif;
+}
+
+/* Elderly users: 20px minimum body text; large-text mode bumps everything. */
+html {
+  font-size: 20px;
+}
+html.large-text {
+  font-size: 24px;
+}
+body {
+  @apply bg-white text-slate-900 antialiased;
+  line-height: 1.7; /* Myanmar script needs extra line height */
+}
+button {
+  @apply min-h-16 cursor-pointer select-none;
+}
