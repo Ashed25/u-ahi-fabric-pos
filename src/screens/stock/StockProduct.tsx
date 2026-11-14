@@ -176,11 +176,11 @@ function StockDialog({ dialog, productId, settings, counting, onClose }: { dialo
       if (dialog.kind === 'receivePieces' || dialog.kind === 'setPieces') {
         const n = toInt(qty)
         if (n === undefined) return setError(t('stock.errNumber'))
-        if (dialog.kind === 'receivePieces') await receivePieces(dialog.v.id!, n, 0, note.trim() || undefined)
+        if (dialog.kind === 'receivePieces') await receivePieces(dialog.v.id!, n, undefined, note.trim() || undefined)
         else await setPieces(dialog.v.id!, n, reason, note)
       } else if (dialog.kind === 'receiveRoll' || dialog.kind === 'setRoll') {
         if (tenths === undefined) return setError(t('stock.errNumber'))
-        if (dialog.kind === 'receiveRoll') await receiveRoll(productId, tenths, 0, note.trim() || undefined)
+        if (dialog.kind === 'receiveRoll') await receiveRoll(productId, tenths, undefined, note.trim() || undefined)
         else await setRollLength(dialog.r.id!, tenths, reason, note)
       } else {
         const n = toInt(amount)

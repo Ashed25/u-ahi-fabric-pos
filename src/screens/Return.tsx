@@ -10,12 +10,14 @@ import { useSettings } from '../db/useSettings'
 import { Btn, Field, Screen, inputCls } from '../ui/kit'
 import { go } from '../ui/router'
 import { setPendingCredit } from './sell/lines'
+import { useSession } from '../session'
 
 /** Return goods from a sale: refund the money, or keep it as credit for an exchange. */
 export function Return({ saleId }: { saleId: string }) {
   const { t, i18n } = useTranslation()
   const lang = i18n.language === 'en' ? 'en' : 'my'
   const settings = useSettings()
+  const { approve } = useSession()
   const data = useLiveQuery(async () => ({ d: await saleDetail(saleId), done: await returnedSoFar(saleId) }), [saleId])
   const [qty, setQty] = useState<Record<number, number>>({})
   const [fabric, setFabric] = useState<Record<number, 'roll' | 'off' | undefined>>({})
@@ -37,10 +39,13 @@ export function Return({ saleId }: { saleId: string }) {
   const totalKs = lines.reduce((s, l) => s + (l.kind === 'piece' ? share(l.unitPriceKs * (qty[l.id!] ?? 0)) : fabric[l.id!] ? share(l.lineTotalKs) : 0), 0)
 
   async function save() {
+    if (!reason.trim()) return setError(t('return.errReason'))
+    const approver = await approve('manager') // sellers need a manager PIN
+    if (!approver) return
     setBusy(true)
     setError('')
     try {
-      const cn = await createReturn({ saleId, items, type, reason, refundMethod: type === 'refund' ? method : undefined })
+      const cn = await createReturn({ saleId, items, type, reason, refundMethod: type === 'refund' ? method : undefined, approvedBy: approver.id })
       if (type === 'exchange') {
         setPendingCredit(cn.id)
         go('#/')

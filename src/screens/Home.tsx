@@ -7,6 +7,9 @@ import { useSettings } from '../db/useSettings'
 import { Btn, Screen } from '../ui/kit'
 import { go } from '../ui/router'
 import { CtWarning } from './Reports'
+import { NEED } from '../access'
+import { atLeast } from '../db/users'
+import { useSession } from '../session'
 
 const TILES = [
   ['today', '📊', 'today.title'],
@@ -21,11 +24,14 @@ const TILES = [
   ['scanner', '🔍', 'scanner.title'],
   ['backup', '💾', 'backup.title'],
   ['settings', '⚙️', 'settings.title'],
+  ['users', '👥', 'users.title'],
+  ['audit', '📜', 'audit.title'],
 ] as const
 
 export function Home() {
   const { t } = useTranslation()
   const settings = useSettings()
+  const { user, lock } = useSession()
   const hasDemoData = useLiveQuery(hasDemo, [])
   const [busy, setBusy] = useState(false)
   if (!settings || hasDemoData === undefined) return null
@@ -39,7 +45,7 @@ export function Home() {
   }
   return (
     <Screen
-      title={t('sell.menu')}
+      title={`${t('sell.menu')} — ${user?.name ?? ''}`}
       back="#/"
       actions={
         <>
@@ -49,6 +55,9 @@ export function Home() {
           <Btn variant="plain" onClick={() => setSetting('lang', settings.lang === 'my' ? 'en' : 'my')}>
             {t('lang.toggle')}
           </Btn>
+          <Btn variant="plain" onClick={lock}>
+            🔒 {t('lock.lock')}
+          </Btn>
         </>
       }
     >
@@ -56,7 +65,7 @@ export function Home() {
         <CtWarning />
       </div>
       <div className="mx-auto grid max-w-4xl grid-cols-2 gap-4 md:grid-cols-3">
-        {TILES.map(([route, icon, label]) => (
+        {TILES.filter(([route]) => atLeast(user, NEED[route])).map(([route, icon, label]) => (
           <button
             key={route}
             className="flex min-h-36 flex-col items-center justify-center gap-2 rounded-3xl border-2 border-slate-300 bg-slate-50 p-4 text-2xl font-bold active:bg-slate-200"
@@ -69,6 +78,7 @@ export function Home() {
           </button>
         ))}
       </div>
+      {atLeast(user, 'owner') && (
       <div className="mx-auto mt-8 max-w-4xl rounded-2xl border-2 border-dashed border-amber-400 bg-amber-50 p-4">
         <p className="mb-3 text-xl">{t(hasDemoData ? 'demo.loadedHint' : 'demo.hint')}</p>
         {hasDemoData ? (
@@ -81,6 +91,7 @@ export function Home() {
           </Btn>
         )}
       </div>
+      )}
     </Screen>
   )
 }

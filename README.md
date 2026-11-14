@@ -4,7 +4,20 @@ Offline-first point of sale for a Myanmar clothing & fabric shop: Android tablet
 
 **Live test version:** https://ashed25.github.io/u-ahi-fabric-pos/
 
-> Status: phases 0, a–e are done (products, barcodes, labels, import, backup, selling, payments, sales history, fabric rolls, remnants, stock, returns/exchanges, voids, daily summary, **reports, CT report, Excel exports**). Next: users/PINs and audit log, then cloud sync. There are no PINs yet, so don't use it in the shop yet.
+> Status: phases 0, a–f are done (products, barcodes, labels, import, backup, selling, payments, sales history, fabric rolls, remnants, stock, returns/exchanges, voids, daily summary, reports, CT report, Excel exports, **users & PINs, roles, auto-lock, audit log, discounts**). Next: cloud backup/sync (phase g) and the Burmese guides.
+
+## First start: users and PINs
+
+1. The first time the app opens it asks you to create the **owner**: a name, a 4-digit **PIN** (to log in) and a **password** (at least 6 characters, for the owner area: settings, users, import, backup, audit log).
+2. Menu → **👥 အသုံးပြုသူများ** → add people with their own PIN and role:
+   - **ရောင်းသူ Seller** (the parents): sell, hold, today's summary, sales history. No price changes, refunds, voids or discounts; no costs or profit.
+   - **မန်နေဂျာ Manager:** also returns/voids, stock, products & prices, labels, reports, discounts.
+   - **ပိုင်ရှင် Owner:** everything.
+3. **🔒** locks the app; it also locks by itself after 5 minutes without use (Settings). The open sale is kept.
+4. When a seller starts a return or a void, or links an unknown barcode, the app asks for a **manager or owner PIN** on the spot. The approver is recorded.
+5. Menu → **📜 စာရင်းစစ် မှတ်တမ်း** (owner): every price change, discount, void, refund, stock change, setting, user change and export, with who and when.
+
+> Updating from an earlier test version: the app now asks you to create the owner first; your products and sales are kept. There are no PINs yet, so don't use it in the shop yet.
 
 ## No scanner yet? Three ways to "scan"
 

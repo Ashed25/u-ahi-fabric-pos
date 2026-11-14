@@ -1,16 +1,13 @@
 import { expect, type Page, test } from '@playwright/test'
+import { nav, scan, start } from './helpers'
 
-async function scan(page: Page, code: string) {
-  await page.keyboard.type(code, { delay: 5 })
-  await page.keyboard.press('Enter')
-}
 const SHIRT_M = '2000000000015'
 const SHIRT_XL = '2000000000039'
 const SILK = '2000000000114'
 const TOWEL = '8851234567890'
 
 async function sellCash(page: Page, codes: string[], silkTaung = 0) {
-  await page.goto('/#/')
+  await nav(page, '#/')
   await expect(page.getByTestId('scan-area')).toBeVisible()
   for (const c of codes) await scan(page, c)
   if (silkTaung) {
@@ -25,14 +22,12 @@ async function sellCash(page: Page, codes: string[], silkTaung = 0) {
 }
 
 test.beforeEach(async ({ page }) => {
-  await page.goto('/#/menu')
-  await page.getByRole('button', { name: 'နမူနာ ပစ္စည်း ထည့်ရန်' }).click()
-  await expect(page.getByRole('button', { name: 'နမူနာ ပစ္စည်း ဖျက်ရန်' })).toBeVisible()
+  await start(page)
 })
 
 test('refund a shirt and a fabric cut; daily summary shows it', async ({ page }) => {
   await sellCash(page, [SHIRT_M], 3) // 15,000 + 12,000
-  await page.goto('/#/sales/A-000001')
+  await nav(page, '#/sales/A-000001')
   await page.getByRole('button', { name: /ပြန်လဲ \/ ပြန်အမ်း/ }).click()
   await page.getByRole('button', { name: '+' }).click()
   await page.getByRole('button', { name: 'လိပ်ထဲ ပြန်ထည့်' }).click()
@@ -48,14 +43,14 @@ test('refund a shirt and a fabric cut; daily summary shows it', async ({ page })
   // fully returned: no void any more
   await expect(page.getByRole('button', { name: /ပယ်ဖျက်ရန်/ })).toHaveCount(0)
 
-  await page.goto('/#/today')
+  await nav(page, '#/today')
   await expect(page.getByTestId('day-total')).toContainText('27,000')
   await expect(page.getByText('အသားတင် ဝင်ငွေ: 0')).toBeVisible()
 })
 
 test('exchange: credit pays for a dearer item, and gives cash back for a cheaper one', async ({ page }) => {
   await sellCash(page, [SHIRT_M, SHIRT_XL]) // 15,000 + 16,500
-  await page.goto('/#/sales/A-000001')
+  await nav(page, '#/sales/A-000001')
   await page.getByRole('button', { name: /ပြန်လဲ \/ ပြန်အမ်း/ }).click()
   await page.getByRole('button', { name: '+' }).first().click() // shirt M
   await page.getByRole('button', { name: /ပစ္စည်း ပြန်လဲ/ }).click()
@@ -74,7 +69,7 @@ test('exchange: credit pays for a dearer item, and gives cash back for a cheaper
   await expect(page.getByTestId('credit-banner')).toHaveCount(0)
 
   // Return the XL from the first sale for a towel (3,500): 13,000 back in cash
-  await page.goto('/#/sales/A-000001')
+  await nav(page, '#/sales/A-000001')
   await page.getByRole('button', { name: /ပြန်လဲ \/ ပြန်အမ်း/ }).click()
   await page.getByRole('button', { name: '+' }).nth(1).click()
   await page.getByRole('button', { name: /ပစ္စည်း ပြန်လဲ/ }).click()
@@ -86,21 +81,21 @@ test('exchange: credit pays for a dearer item, and gives cash back for a cheaper
   await page.getByRole('button', { name: /ပြီးပြီ/ }).click()
   await expect(page.getByText('13,000', { exact: true })).toBeVisible()
 
-  await page.goto('/#/sales/A-000002')
+  await nav(page, '#/sales/A-000002')
   await expect(page.getByText(/ပြန်လဲ ခံစားခွင့်/).first()).toBeVisible()
 })
 
 test('void a mistaken sale: keeps its number, marked VOID, stock back', async ({ page }) => {
   await sellCash(page, [SHIRT_M])
-  await page.goto('/#/sales/A-000001')
+  await nav(page, '#/sales/A-000001')
   await page.getByRole('button', { name: /အရောင်း ပယ်ဖျက်ရန်/ }).click()
   await page.getByLabel('အကြောင်းရင်း (မဖြစ်မနေ)').fill('scanned twice')
   await page.getByRole('button', { name: 'ပယ်ဖျက်မည်' }).click()
   await expect(page.getByText(/VOID — scanned twice/)).toBeVisible()
-  await page.goto('/#/sales')
+  await nav(page, '#/sales')
   await expect(page.getByText('VOID', { exact: true })).toBeVisible()
   await expect(page.getByText('အရောင်း 0 ခု — 0 ကျပ်')).toBeVisible()
-  await page.goto('/#/stock')
+  await nav(page, '#/stock')
   await page.getByRole('button', { name: /ရှပ်အင်္ကျီ အဖြူ/ }).click()
   await expect(page.getByRole('heading', { name: 'ရှပ်အင်္ကျီ အဖြူ' })).toBeVisible()
   await expect(page.getByText('30 ထည်')).toBeVisible()

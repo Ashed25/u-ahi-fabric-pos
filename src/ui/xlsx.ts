@@ -2,6 +2,7 @@ import { dateKey, timeText } from '../core/fy'
 import { formatEntered, formatInches, formatLargestFirst } from '../core/length'
 import type { Report, ReportInput } from '../core/reports'
 import type { Unit } from '../core/units'
+import { audit } from '../db/audit'
 import { db } from '../db/schema'
 
 // The Excel library is large: load it only when exporting.
@@ -9,6 +10,7 @@ const xlsx = () => import('xlsx')
 type Row = Record<string, string | number | undefined>
 
 async function save(filename: string, sheets: [string, Row[] | (string | number)[][]][]) {
+  await audit('export.excel', filename)
   const X = await xlsx()
   const wb = X.utils.book_new()
   for (const [name, rows] of sheets) {

@@ -14,7 +14,9 @@ export function Btn({
   className = '',
   ...p
 }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: keyof typeof variants }) {
-  return <button {...p} className={`rounded-2xl px-5 text-xl font-bold ${variants[variant]} ${className}`} />
+  // Default text-xl only when the caller sets no size: two text-* classes would fight.
+  const size = /\btext-(xs|sm|base|lg|xl|\dxl)\b/.test(className) ? '' : 'text-xl'
+  return <button {...p} className={`rounded-2xl px-5 font-bold ${size} ${variants[variant]} ${className}`} />
 }
 
 export function Screen({

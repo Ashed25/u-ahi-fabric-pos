@@ -2,6 +2,7 @@ import { type CartLine, cartTotals } from '../core/cart'
 import { roundFraction } from '../core/pricing'
 import { defaultRoll, sellableRolls } from '../core/stock'
 import { creditLeft } from './returns'
+import { currentUserId, requireRole } from './users'
 import { type Payment, type Sale, type SaleLine, db } from './schema'
 import { getSetting, setSetting } from './settings'
 
@@ -19,17 +20,22 @@ export interface CompleteResult {
  * so a failed sale never uses up a number (no gaps) and never half-saves.
  * Practice mode validates the same way but writes nothing.
  */
-export async function completeSale(
-  lines: CartLine[],
-  payments: PaymentInput[],
-  userId = 0,
+export interface SaleOptions {
   // Exchange credit worth more than the new items: the rest is paid back (in the same transaction).
-  creditPayout?: { cnId: string; method: string; amountKs: number },
-): Promise<CompleteResult> {
+  creditPayout?: { cnId: string; method: string; amountKs: number }
+  discountKs?: number // whole-sale discount, manager/owner only
+  discountBy?: number // the manager/owner who approved it
+}
+
+export async function completeSale(lines: CartLine[], payments: PaymentInput[], { creditPayout, discountKs = 0, discountBy }: SaleOptions = {}): Promise<CompleteResult> {
+  if (discountKs) await requireRole('manager', discountBy)
+  const userId = currentUserId()
   return db.transaction('rw', [db.sales, db.saleLines, db.payments, db.settings, db.variants, db.rolls, db.stockMoves, db.creditNotes, db.products], async () => {
     if (!lines.length) throw new Error('Empty sale')
     const ct = await getSetting('ct')
-    const totals = cartTotals(lines, ct)
+    if (!Number.isSafeInteger(discountKs) || discountKs < 0) throw new Error('Bad discount')
+    const totals = cartTotals(lines, ct, discountKs)
+    if (totals.subtotalKs - discountKs < 0) throw new Error('Discount is more than the sale')
     for (const p of payments) {
       if (!Number.isSafeInteger(p.amountKs) || p.amountKs <= 0) throw new Error(`Bad payment amount ${p.amountKs}`)
       if (p.changeKs && p.method !== 'cash') throw new Error('Change can only be given in cash')
@@ -82,7 +88,7 @@ export async function completeSale(
   })
 }
 
-export function parkSale(lines: CartLine[], userId = 0) {
+export function parkSale(lines: CartLine[], userId = currentUserId()) {
   return db.parked.add({ at: Date.now(), userId, cart: lines })
 }
 

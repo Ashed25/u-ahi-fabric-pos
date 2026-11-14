@@ -7,8 +7,8 @@ import { type Settings, setSetting } from '../db/settings'
 import { useSettings } from '../db/useSettings'
 import { Btn, Field, Screen, inputCls, toInt } from '../ui/kit'
 
-type Draft = Pick<Settings, 'shopName' | 'shopAddress' | 'shopPhone' | 'tin' | 'roundStep' | 'roundMode' | 'receiptEnabled' | 'receiptFooter' | 'returnPolicy' | 'practiceMode' | 'devicePrefix' | 'paymentMethods' | 'ct' | 'remnantBelowTenths' | 'cashCheck' | 'ctThresholdKs'>
-const KEYS: (keyof Draft)[] = ['shopName', 'shopAddress', 'shopPhone', 'tin', 'roundStep', 'roundMode', 'receiptEnabled', 'receiptFooter', 'returnPolicy', 'practiceMode', 'devicePrefix', 'paymentMethods', 'ct', 'remnantBelowTenths', 'cashCheck', 'ctThresholdKs']
+type Draft = Pick<Settings, 'shopName' | 'shopAddress' | 'shopPhone' | 'tin' | 'roundStep' | 'roundMode' | 'receiptEnabled' | 'receiptFooter' | 'returnPolicy' | 'practiceMode' | 'devicePrefix' | 'paymentMethods' | 'ct' | 'remnantBelowTenths' | 'cashCheck' | 'ctThresholdKs' | 'autoLockMinutes'>
+const KEYS: (keyof Draft)[] = ['shopName', 'shopAddress', 'shopPhone', 'tin', 'roundStep', 'roundMode', 'receiptEnabled', 'receiptFooter', 'returnPolicy', 'practiceMode', 'devicePrefix', 'paymentMethods', 'ct', 'remnantBelowTenths', 'cashCheck', 'ctThresholdKs', 'autoLockMinutes']
 
 export function SettingsScreen() {
   const { t } = useTranslation()
@@ -144,6 +144,17 @@ export function SettingsScreen() {
         </Field>
 
         <h2 className="text-2xl font-bold">{t('settings.device')}</h2>
+        <Field label={t('settings.autoLock')} hint={t('settings.autoLockHint')}>
+          <input
+            className={`${inputCls} w-32`}
+            inputMode="numeric"
+            defaultValue={d.autoLockMinutes}
+            onChange={(e) => {
+              const n = toInt(e.target.value)
+              if (n !== undefined) set({ autoLockMinutes: n })
+            }}
+          />
+        </Field>
         <Field label={t('settings.prefix')} hint={t(hasSales ? 'settings.prefixLocked' : 'settings.prefixHint')}>
           <input className={`${inputCls} w-24`} maxLength={1} disabled={hasSales} value={d.devicePrefix} onChange={(e) => set({ devicePrefix: e.target.value.toUpperCase() })} />
         </Field>

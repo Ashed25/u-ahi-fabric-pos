@@ -6,19 +6,22 @@
   --font-sans: 'Noto Sans Myanmar', system-ui, sans-serif;
 }
 
-/* Elderly users: 20px minimum body text; large-text mode bumps everything. */
-html {
-  font-size: 20px;
-}
-html.large-text {
-  font-size: 24px;
-}
-body {
-  @apply bg-white text-slate-900 antialiased;
-  line-height: 1.7; /* Myanmar script needs extra line height */
-}
-button {
-  @apply min-h-16 cursor-pointer select-none;
+/* In the base layer so per-element utilities (min-h-20, text-4xl …) can override them. */
+@layer base {
+  /* Elderly users: 20px minimum body text; large-text mode bumps everything. */
+  html {
+    font-size: 20px;
+  }
+  html.large-text {
+    font-size: 24px;
+  }
+  body {
+    @apply bg-white text-slate-900 antialiased;
+    line-height: 1.7; /* Myanmar script needs extra line height */
+  }
+  button {
+    @apply min-h-16 cursor-pointer select-none;
+  }
 }
 
 /* Label printing */

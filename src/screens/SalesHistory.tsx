@@ -9,6 +9,7 @@ import { type Sale, db } from '../db/schema'
 import { useSettings } from '../db/useSettings'
 import { methodName, unitName } from '../ui/format'
 import { voidSale } from '../db/returns'
+import { useSession } from '../session'
 import { Btn, Field, Modal, Screen, inputCls } from '../ui/kit'
 import { ReceiptModal } from '../ui/ReceiptModal'
 import { go } from '../ui/router'
@@ -90,14 +91,18 @@ export function SaleView({ id }: { id: string }) {
   }, [id])
   const [receipt, setReceipt] = useState(false)
   const [voiding, setVoiding] = useState(false)
+  const { approve } = useSession()
   const [voidReason, setVoidReason] = useState('')
   const [error, setError] = useState('')
   if (!settings || d === undefined) return null
 
   const { sale, lines, payments, credits, payouts } = d
   async function doVoid() {
+    if (!voidReason.trim()) return setError(t('return.errReason'))
+    const approver = await approve('manager')
+    if (!approver) return
     try {
-      await voidSale(sale.id, voidReason)
+      await voidSale(sale.id, voidReason, approver.id)
       setVoiding(false)
     } catch (e) {
       setError(/reason/i.test(String(e)) ? t('return.errReason') : String(e))

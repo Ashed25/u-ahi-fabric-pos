@@ -2,6 +2,7 @@ import { roundFraction } from '../core/pricing'
 import { audit } from './audit'
 import { type CreditLine, type CreditNote, type Sale, type SaleLine, db } from './schema'
 import { getSetting, setSetting } from './settings'
+import { currentUserId, requireRole } from './users'
 
 export interface ReturnItem {
   saleLineId: number
@@ -48,9 +49,10 @@ async function putBack(l: SaleLine, qty: number, toRoll: boolean, at: number, us
  * Return goods against a completed sale. Creates a numbered credit note (never edits the sale),
  * puts stock back, and for a refund records the money paid back. An exchange keeps the value as credit.
  */
-export function createReturn(o: { saleId: string; items: ReturnItem[]; type: CreditNote['type']; reason: string; refundMethod?: string; userId?: number; approvedBy?: number }): Promise<CreditNote> {
+export async function createReturn(o: { saleId: string; items: ReturnItem[]; type: CreditNote['type']; reason: string; refundMethod?: string; approvedBy?: number }): Promise<CreditNote> {
+  await requireRole('manager', o.approvedBy) // a seller needs a manager to enter their PIN
   return db.transaction('rw', TABLES(), async () => {
-    const userId = o.userId ?? 0
+    const userId = currentUserId()
     const sale = await db.sales.get(o.saleId)
     if (!sale || sale.status !== 'completed') throw new Error('Sale not found or void')
     if (!o.reason.trim()) throw new Error('A reason is required')
@@ -98,16 +100,19 @@ export async function creditLeft(cnId: string): Promise<number> {
 }
 
 /** Pay out unused exchange credit (e.g. customer wants money instead, or new items cost less). */
-export function payOutCredit(cnId: string, method: string, amountKs: number, userId = 0) {
+export async function payOutCredit(cnId: string, method: string, amountKs: number, approvedBy?: number) {
+  await requireRole('manager', approvedBy)
   return db.transaction('rw', [db.creditNotes, db.payments, db.audit], async () => {
     if (amountKs <= 0 || amountKs > (await creditLeft(cnId))) throw new Error('More than the credit left')
     await db.payments.add({ saleId: cnId, method, amountKs: -amountKs, at: Date.now() })
-    await audit('credit.payout', `credit:${cnId}`, undefined, { method, amountKs }, userId)
+    await audit('credit.payout', `credit:${cnId}`, undefined, { method, amountKs, approvedBy })
   })
 }
 
 /** Cancel a mistaken sale: keeps its number (marked VOID), puts all stock back. Not allowed after a return. */
-export function voidSale(saleId: string, reason: string, userId = 0, approvedBy = userId) {
+export async function voidSale(saleId: string, reason: string, approvedBy?: number) {
+  await requireRole('manager', approvedBy)
+  const userId = currentUserId()
   return db.transaction('rw', TABLES(), async () => {
     const sale = await db.sales.get(saleId)
     if (!sale || sale.status !== 'completed') throw new Error('Sale not found or already void')
@@ -115,7 +120,7 @@ export function voidSale(saleId: string, reason: string, userId = 0, approvedBy 
     if ((await db.creditNotes.where('saleId').equals(saleId).count()) > 0) throw new Error('This sale has returns; use a return instead')
     const at = Date.now()
     for (const l of await db.saleLines.where('saleId').equals(saleId).toArray()) await putBack(l, l.qty ?? 0, true, at, userId, saleId)
-    await db.sales.update(saleId, { status: 'void', voidReason: reason.trim(), voidBy: approvedBy })
+    await db.sales.update(saleId, { status: 'void', voidReason: reason.trim(), voidBy: approvedBy ?? userId })
     await audit('sale.void', `sale:${saleId}`, { status: 'completed' }, { status: 'void', reason, approvedBy }, userId)
   })
 }

@@ -1,9 +1,11 @@
 import { audit } from './audit'
 import { type MoveReason, db } from './schema'
+import { currentUserId, requireRole } from './users'
 
 /** Every stock change is a StockMove (append-only) plus the cached figure on the roll / variant, in one transaction. */
 
-export function receiveRoll(productId: number, tenths: number, userId = 0, note?: string): Promise<number> {
+export async function receiveRoll(productId: number, tenths: number, userId = currentUserId(), note?: string): Promise<number> {
+  await requireRole('manager')
   return db.transaction('rw', [db.rolls, db.stockMoves, db.audit], async () => {
     if (!Number.isSafeInteger(tenths) || tenths <= 0) throw new Error('Roll length must be above 0')
     const at = Date.now()
@@ -14,7 +16,8 @@ export function receiveRoll(productId: number, tenths: number, userId = 0, note?
   })
 }
 
-export function receivePieces(variantId: number, qty: number, userId = 0, note?: string) {
+export async function receivePieces(variantId: number, qty: number, userId = currentUserId(), note?: string) {
+  await requireRole('manager')
   return db.transaction('rw', [db.variants, db.stockMoves, db.audit], async () => {
     if (!Number.isSafeInteger(qty) || qty <= 0) throw new Error('Quantity must be above 0')
     const v = await db.variants.get(variantId)
@@ -28,7 +31,8 @@ export function receivePieces(variantId: number, qty: number, userId = 0, note?:
 type AdjustReason = Extract<MoveReason, 'adjust' | 'waste' | 'count'>
 
 /** Set a roll to what was measured. A reason is always required. */
-export function setRollLength(rollId: number, tenths: number, reason: AdjustReason, note: string, userId = 0) {
+export async function setRollLength(rollId: number, tenths: number, reason: AdjustReason, note: string, userId = currentUserId()) {
+  await requireRole('manager')
   return db.transaction('rw', [db.rolls, db.stockMoves, db.audit], async () => {
     if (!Number.isSafeInteger(tenths) || tenths < 0) throw new Error('Length must be 0 or more')
     if (reason !== 'count' && !note.trim()) throw new Error('A reason is required')
@@ -42,7 +46,8 @@ export function setRollLength(rollId: number, tenths: number, reason: AdjustReas
 }
 
 /** Set pieces to what was counted. A reason is always required. */
-export function setPieces(variantId: number, qty: number, reason: AdjustReason, note: string, userId = 0) {
+export async function setPieces(variantId: number, qty: number, reason: AdjustReason, note: string, userId = currentUserId()) {
+  await requireRole('manager')
   return db.transaction('rw', [db.variants, db.stockMoves, db.audit], async () => {
     if (!Number.isSafeInteger(qty) || qty < 0) throw new Error('Quantity must be 0 or more')
     if (reason !== 'count' && !note.trim()) throw new Error('A reason is required')
@@ -55,7 +60,8 @@ export function setPieces(variantId: number, qty: number, reason: AdjustReason, 
 }
 
 /** Remnant: a fixed price for the whole piece, or a % off the normal price. */
-export function markRemnant(rollId: number, price: { wholeKs: number } | { pct: number } | null, userId = 0) {
+export async function markRemnant(rollId: number, price: { wholeKs: number } | { pct: number } | null, userId = currentUserId()) {
+  await requireRole('manager')
   return db.transaction('rw', [db.rolls, db.audit], async () => {
     const r = await db.rolls.get(rollId)
     if (!r || r.status === 'finished') throw new Error('Roll not available')

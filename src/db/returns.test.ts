@@ -64,7 +64,7 @@ describe('returns', () => {
     const cn = await createReturn({ saleId: sale.id, items: [{ saleLineId: shirtLine, qty: 2 }], type: 'exchange', reason: 'size' })
     expect(await creditLeft(cn.id)).toBe(30000)
     const cheaper = addPiece([], { productId: 1, variantId: vid, nameMy: 'ရှပ်', sub: 'M', unitPriceKs: 25000 })
-    await completeSale(cheaper, [{ method: 'credit', amountKs: 25000, ref: cn.id }], 0, { cnId: cn.id, method: 'cash', amountKs: 5000 })
+    await completeSale(cheaper, [{ method: 'credit', amountKs: 25000, ref: cn.id }], { creditPayout: { cnId: cn.id, method: 'cash', amountKs: 5000 } })
     expect(await creditLeft(cn.id)).toBe(0)
     await expect(completeSale(cheaper, [{ method: 'credit', amountKs: 25000, ref: cn.id }])).rejects.toThrow(/credit/)
     await expect(payOutCredit(cn.id, 'cash', 1)).rejects.toThrow()

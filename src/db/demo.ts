@@ -66,9 +66,9 @@ export async function loadDemo() {
       await assignBarcode(it.supplierCode, id, v?.id)
     }
     // Opening stock: 10 of each size/colour, and the listed fabric rolls (one short roll to try remnants).
-    for (const v of await db.variants.where('productId').equals(id).toArray()) await receivePieces(v.id!, 10, 0, 'demo')
+    for (const v of await db.variants.where('productId').equals(id).toArray()) await receivePieces(v.id!, 10, undefined, 'demo')
     for (const r of it.rolls ?? []) {
-      const rollId = await receiveRoll(id, r.tenths, 0, 'demo')
+      const rollId = await receiveRoll(id, r.tenths, undefined, 'demo')
       if (r.remnantPct) await markRemnant(rollId, { pct: r.remnantPct })
     }
   }

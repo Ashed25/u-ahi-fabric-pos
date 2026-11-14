@@ -17,6 +17,8 @@ export interface User {
   pinHash: string
   salt: string
   active: boolean
+  pwHash?: string // owner password (owner area)
+  pwSalt?: string
 }
 
 export interface Category {

@@ -3,6 +3,7 @@ import type { ParsedProduct } from '../core/importer'
 import { audit } from './audit'
 import { type Barcode, type Product, type Variant, db } from './schema'
 import { getSetting, setSetting } from './settings'
+import { requireRole } from './users'
 
 const WRITE_TABLES = () => [db.products, db.variants, db.barcodes, db.settings, db.audit, db.categories]
 
@@ -56,7 +57,8 @@ async function saveInTx(p: Product, variants: Variant[]): Promise<number> {
   return id
 }
 
-export function saveProduct(p: Product, variants: Variant[] = []): Promise<number> {
+export async function saveProduct(p: Product, variants: Variant[] = []): Promise<number> {
+  await requireRole('manager') // prices: never a seller
   // Callback must be async: a plain arrow returning a promise makes Dexie commit too early.
   return db.transaction('rw', WRITE_TABLES(), async () => await saveInTx(p, variants))
 }
@@ -64,7 +66,8 @@ export function saveProduct(p: Product, variants: Variant[] = []): Promise<numbe
 export type AssignResult = { ok: true } | { ok: false; taken: Barcode; productName?: string }
 
 /** Link an existing (supplier / pre-printed) barcode. Barcodes are unique across all products. */
-export function assignBarcode(code: string, productId: number, variantId?: number): Promise<AssignResult> {
+export async function assignBarcode(code: string, productId: number, variantId?: number, approvedBy?: number): Promise<AssignResult> {
+  await requireRole('manager', approvedBy)
   return db.transaction('rw', [db.barcodes, db.products, db.audit], async () => {
     if (!/^\d{4,}$/.test(code)) throw new Error(`Barcode must be digits: ${code}`)
     const taken = await db.barcodes.get(code)
@@ -75,7 +78,8 @@ export function assignBarcode(code: string, productId: number, variantId?: numbe
   })
 }
 
-export function removeBarcode(code: string) {
+export async function removeBarcode(code: string) {
+  await requireRole('manager')
   return db.transaction('rw', [db.barcodes, db.audit], async () => {
     const b = await db.barcodes.get(code)
     await db.barcodes.delete(code)
@@ -100,7 +104,8 @@ async function categoryId(nameMy: string): Promise<number | undefined> {
 }
 
 /** Import parsed Excel rows in one transaction: all or nothing. Barcodes are generated for everything. */
-export function importProducts(items: ParsedProduct[]): Promise<number> {
+export async function importProducts(items: ParsedProduct[]): Promise<number> {
+  await requireRole('owner')
   return db.transaction('rw', WRITE_TABLES(), async () => {
     for (const it of items) {
       const p: Product = {

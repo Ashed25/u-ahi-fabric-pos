@@ -1,21 +1,16 @@
 import { expect, type Page, test } from '@playwright/test'
+import { nav, scan, start } from './helpers'
 
-async function scan(page: Page, code: string) {
-  await page.keyboard.type(code, { delay: 5 })
-  await page.keyboard.press('Enter')
-}
 const SILK = '2000000000114' // 2 rolls: 50 ကိုက် and 12 ကိုက် 1 တောင်
 const LACE = '2000000000138' // 4,000/တောင်; 20 ကိုက် roll + a 30%-off remnant
 const PRINTED = '2000000000145' // one short roll (2 ထွာ)
 
 test.beforeEach(async ({ page }) => {
-  await page.goto('/#/menu')
-  await page.getByRole('button', { name: 'နမူနာ ပစ္စည်း ထည့်ရန်' }).click()
-  await expect(page.getByRole('button', { name: 'နမူနာ ပစ္စည်း ဖျက်ရန်' })).toBeVisible()
+  await start(page)
 })
 
 test('sell from the open roll, a % remnant and a whole remnant; stock follows', async ({ page }) => {
-  await page.goto('/#/')
+  await nav(page, '#/')
   await expect(page.getByTestId('scan-area')).toBeVisible()
 
   // Silk: two rolls, the open (shorter) one is chosen by default
@@ -39,13 +34,13 @@ test('sell from the open roll, a % remnant and a whole remnant; stock follows', 
   await expect(page.getByText('အရောင်း နံပါတ် A-000001')).toBeVisible()
 
   // Stock: silk open roll is now 11 ကိုက် 1 တောင်
-  await page.goto('/#/stock')
+  await nav(page, '#/stock')
   await page.getByRole('button', { name: /ပိုးထည် အပြာ/ }).click()
   await expect(page.getByText('11 ကိုက် 1 တောင် (414")')).toBeVisible()
   await expect(page.getByText('ရောင်း', { exact: true })).toBeVisible()
 
   // Printed cotton: short roll is offered as a remnant; sell it whole for 1,500
-  await page.goto('/#/stock')
+  await nav(page, '#/stock')
   await expect(page.getByText('တိုနေသော လိပ်များ — အစ အဖြစ် ရောင်းမလား')).toBeVisible()
   await page.getByRole('button', { name: /ချည်ထည် ပန်းရိုက်/ }).first().click()
   await page.getByRole('button', { name: '✂ အစ' }).click()
@@ -54,7 +49,7 @@ test('sell from the open roll, a % remnant and a whole remnant; stock follows', 
   await page.getByRole('button', { name: 'သိမ်းရန်' }).click()
   await expect(page.getByText('အစ — အကုန် 1,500 ကျပ်')).toBeVisible()
 
-  await page.goto('/#/')
+  await nav(page, '#/')
   await expect(page.getByTestId('scan-area')).toBeVisible()
   await scan(page, PRINTED)
   await page.getByRole('button', { name: /အစ အကုန်ယူ — 1,500/ }).click()
@@ -64,13 +59,13 @@ test('sell from the open roll, a % remnant and a whole remnant; stock follows', 
   await page.getByRole('button', { name: 'ငွေရှင်းရန်' }).click()
   await page.getByRole('button', { name: 'ကွက်တိ' }).click()
   await page.getByRole('button', { name: /ပြီးပြီ/ }).click()
-  await page.goto('/#/stock')
+  await nav(page, '#/stock')
   await page.getByRole('button', { name: /ချည်ထည် ပန်းရိုက်/ }).first().click()
   await expect(page.getByRole('button', { name: /ကုန်ပြီးသော လိပ်များ \(1\)/ })).toBeVisible()
 })
 
 test('receive pieces, adjust needs a reason, receive a roll, stock count', async ({ page }) => {
-  await page.goto('/#/stock')
+  await nav(page, '#/stock')
   await page.getByRole('button', { name: /ပုဆိုး ကွက်/ }).click()
   await page.getByRole('button', { name: '+ ဝင်' }).click()
   await page.getByLabel('ဘယ်နှစ်ထည် ဝင်သလဲ').fill('5')
@@ -86,7 +81,7 @@ test('receive pieces, adjust needs a reason, receive a roll, stock count', async
   await expect(page.getByText('14 ထည်')).toBeVisible()
   await expect(page.getByText('damaged')).toBeVisible()
 
-  await page.goto('/#/stock')
+  await nav(page, '#/stock')
   await page.getByRole('button', { name: /ချည်ထည် အဖြူ/ }).click()
   await page.getByRole('button', { name: '+ လိပ်အသစ် ဝင်ရန်' }).click()
   await page.getByLabel('ကိုက်').fill('40')
@@ -94,7 +89,7 @@ test('receive pieces, adjust needs a reason, receive a roll, stock count', async
   await expect(page.getByText('70 ကိုက်')).toBeVisible()
 
   // Stock count: scanning opens the product in count mode
-  await page.goto('/#/count')
+  await nav(page, '#/count')
   await page.getByRole('button', { name: 'စစ်ဆေးမှု အသစ် စမည်' }).click()
   await expect(page.getByText('စစ်ပြီး 0 / 9')).toBeVisible()
   await scan(page, '8851234567890') // towel (supplier code)
@@ -106,7 +101,7 @@ test('receive pieces, adjust needs a reason, receive a roll, stock count', async
 })
 
 test('sell without a scanner: type a barcode or a name in "choose by photo"', async ({ page }) => {
-  await page.goto('/#/')
+  await nav(page, '#/')
   await page.getByRole('button', { name: /ဓာတ်ပုံဖြင့် ရွေးရန်/ }).click()
   await page.getByPlaceholder('အမည် (သို့) ဘားကုဒ် နံပါတ် ရိုက်ပါ').fill('2000000000015')
   await page.getByRole('button', { name: 'ရှာရန်' }).click()

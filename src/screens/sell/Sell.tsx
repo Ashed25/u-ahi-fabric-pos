@@ -11,7 +11,10 @@ import { completeSale, parkSale, resumeParked } from '../../db/sales'
 import { type Product, type Variant, db } from '../../db/schema'
 import type { Settings } from '../../db/settings'
 import { useSettings } from '../../db/useSettings'
-import { Btn, Modal } from '../../ui/kit'
+import { Btn, Modal, inputCls, toInt } from '../../ui/kit'
+import { roundFraction } from '../../core/pricing'
+import { atLeast } from '../../db/users'
+import { useSession } from '../../session'
 import { Photo } from '../../ui/photo'
 import { ReceiptModal } from '../../ui/ReceiptModal'
 import { go } from '../../ui/router'
@@ -64,7 +67,16 @@ function SellScreen({ settings }: { settings: Settings }) {
     return new Map(ps.filter(Boolean).map((p) => [p!.id!, p!.photo]))
   }, [lines.map((l) => l.productId).join()])
   const held = useLiveQuery(() => db.parked.orderBy('at').toArray(), [])
-  const totals = cartTotals(lines, settings.ct)
+  const { user, lock, approve } = useSession()
+  // Whole-sale discount: managers/owners only; % is rounded like fabric prices.
+  const [discount, setDiscount] = useState<{ pct?: number; amountKs?: number; by: number }>()
+  const [discountOpen, setDiscountOpen] = useState(false)
+  const subtotalKs = cartTotals(lines, settings.ct).subtotalKs
+  const discountKs = !discount ? 0 : discount.pct ? roundFraction(subtotalKs * discount.pct, 100, settings.roundStep, 'nearest') : Math.min(discount.amountKs ?? 0, subtotalKs)
+  const totals = cartTotals(lines, settings.ct, discountKs)
+  useEffect(() => {
+    if (!lines.length) setDiscount(undefined)
+  }, [lines.length])
 
   function say(f: Flash) {
     setFlash(f)
@@ -107,13 +119,20 @@ function SellScreen({ settings }: { settings: Settings }) {
     }
     setGrid(undefined)
     setVariantFor(undefined)
-    const r = await assignBarcode(code, p.id!, v?.id)
+    const approver = await approve('manager')
+    if (!approver) return
+    const r = await assignBarcode(code, p.id!, v?.id, approver.id)
     if (!r.ok) return say({ ok: false, text: t('barcode.taken', { code, name: r.productName ?? '?' }) })
     addProduct(p, v)
   }
 
   async function finish(payments: Parameters<typeof completeSale>[1], creditBackKs: number) {
-    const r = await completeSale(lines, payments, 0, creditCn && creditBackKs > 0 ? { cnId: creditCn, method: 'cash', amountKs: creditBackKs } : undefined)
+    const r = await completeSale(lines, payments, {
+      creditPayout: creditCn && creditBackKs > 0 ? { cnId: creditCn, method: 'cash', amountKs: creditBackKs } : undefined,
+      discountKs,
+      discountBy: discount?.by,
+    })
+    setDiscount(undefined)
     setPaying(false)
     setLines([])
     setFlash(undefined)
@@ -171,8 +190,12 @@ function SellScreen({ settings }: { settings: Settings }) {
             {t('sell.held', { count: held!.length })}
           </Btn>
         )}
+        <span className="hidden text-lg md:inline">👤 {user?.name}</span>
         <Btn variant="plain" onClick={() => go('#/menu')}>
           ☰ {t('sell.menu')}
+        </Btn>
+        <Btn variant="plain" aria-label={t('lock.lock')} onClick={lock}>
+          🔒
         </Btn>
       </header>
       {settings.practiceMode && <div className="bg-orange-500 py-2 text-center text-2xl font-bold text-white">{t('sell.practiceBanner')}</div>}
@@ -195,7 +218,9 @@ function SellScreen({ settings }: { settings: Settings }) {
             <Btn
               variant="ok"
               onClick={async () => {
-                await payOutCredit(creditCn, 'cash', creditLeftKs ?? 0)
+                const approver = await approve('manager')
+                if (!approver) return
+                await payOutCredit(creditCn, 'cash', creditLeftKs ?? 0, approver.id)
                 setCashOut(false)
                 clearCredit()
               }}
@@ -245,6 +270,12 @@ function SellScreen({ settings }: { settings: Settings }) {
             <div className="text-6xl font-bold" data-testid="total">
               {formatKs(totals.totalKs)}
             </div>
+            {discountKs > 0 && (
+              <div className="text-lg" data-testid="discount">
+                {t('receipt.discount')} −{formatKs(discountKs)}
+                {discount?.pct ? ` (${discount.pct}%)` : ''}
+              </div>
+            )}
             {totals.ctKs > 0 && <div className="text-base">{t('receipt.ct')} {formatKs(totals.ctKs)}</div>}
           </div>
           <Btn variant="ok" className="min-h-24 text-4xl" disabled={!lines.length} onClick={() => setPaying(true)}>
@@ -256,8 +287,24 @@ function SellScreen({ settings }: { settings: Settings }) {
           <Btn variant="plain" className="min-h-18 text-2xl" onClick={() => setGrid({ kind: 'sell' })}>
             📷 {t('sell.byPhoto')}
           </Btn>
+          {atLeast(user, 'manager') && lines.length > 0 && (
+            <Btn variant="plain" onClick={() => setDiscountOpen(true)}>
+              % {t('discount.button')}
+            </Btn>
+          )}
         </aside>
       </div>
+
+      {discountOpen && user && (
+        <DiscountDialog
+          subtotalKs={subtotalKs}
+          onClose={() => setDiscountOpen(false)}
+          onSet={(d) => {
+            setDiscount(d && { ...d, by: user.id! })
+            setDiscountOpen(false)
+          }}
+        />
+      )}
 
       {paying && (
         <Payment
@@ -394,6 +441,40 @@ function SellScreen({ settings }: { settings: Settings }) {
         </Modal>
       )}
     </div>
+  )
+}
+
+function DiscountDialog({ subtotalKs, onSet, onClose }: { subtotalKs: number; onSet: (d?: { pct?: number; amountKs?: number }) => void; onClose: () => void }) {
+  const { t } = useTranslation()
+  const [amount, setAmount] = useState('')
+  const n = toInt(amount)
+  return (
+    <Modal onClose={onClose}>
+      <BlockScans />
+      <h2 className="mb-4 text-2xl font-bold">% {t('discount.button')}</h2>
+      <div className="mb-4 grid grid-cols-4 gap-2">
+        {[5, 10, 15, 20].map((p) => (
+          <Btn key={p} variant="plain" className="text-2xl" onClick={() => onSet({ pct: p })}>
+            {p}%
+          </Btn>
+        ))}
+      </div>
+      <label className="block text-xl">
+        {t('discount.amount')}
+        <input className={inputCls} inputMode="numeric" value={amount} onChange={(e) => setAmount(e.target.value)} />
+      </label>
+      <div className="mt-4 grid grid-cols-3 gap-3">
+        <Btn variant="plain" onClick={() => onSet(undefined)}>
+          {t('discount.none')}
+        </Btn>
+        <Btn variant="plain" onClick={onClose}>
+          {t('common.cancel')}
+        </Btn>
+        <Btn variant="ok" disabled={!n || n > subtotalKs} onClick={() => onSet({ amountKs: n })}>
+          {t('common.ok')}
+        </Btn>
+      </div>
+    </Modal>
   )
 }
 

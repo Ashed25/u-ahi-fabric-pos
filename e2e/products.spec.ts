@@ -1,14 +1,11 @@
 import { expect, type Page, test } from '@playwright/test'
+import { nav, scan, start } from './helpers'
 
 /** A HID scanner: digits typed a few ms apart, then Enter. */
-async function scan(page: Page, code: string) {
-  await page.keyboard.type(code, { delay: 5 })
-  await page.keyboard.press('Enter')
-}
-
 test('owner adds a fabric and a shirt, links a supplier barcode, scans it, previews labels', async ({ page }) => {
-  await page.goto('/#/menu')
-  await expect(page.getByRole('heading', { name: 'မီနူး' })).toBeVisible()
+  await start(page, { demo: false })
+  await nav(page, '#/menu')
+  await expect(page.getByRole('heading', { name: 'မီနူး — ဦးအဟိ' })).toBeVisible()
 
   // Fabric, priced per ကိုက်
   await page.getByRole('button', { name: /ပစ္စည်းများ/ }).click()
@@ -44,14 +41,14 @@ test('owner adds a fabric and a shirt, links a supplier barcode, scans it, previ
   await expect(page.getByText('8,000 ကျပ် / ကိုက်')).toBeVisible()
 
   // Scanner test finds the fabric by its supplier code, even with a Burmese layout (key ≠ digit)
-  await page.goto('/#/scanner')
+  await nav(page, '#/scanner')
   await scan(page, '8851234567890')
   await expect(page.getByText('တွေ့ပြီ — ပိုးထည် အပြာ')).toBeVisible()
   await scan(page, '1234567')
   await expect(page.getByText('ဒီပစ္စည်း မတွေ့ပါ')).toBeVisible()
 
   // Labels: one per fabric + one per shirt size
-  await page.goto('/#/labels')
+  await nav(page, '#/labels')
   await page.getByRole('button', { name: 'ကြိုကြည့်ရန် (3 ခု)' }).click()
   await expect(page.locator('.label-box')).toHaveCount(3)
   await expect(page.locator('.label-box svg rect').first()).toBeAttached()

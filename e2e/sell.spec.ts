@@ -1,19 +1,13 @@
 import { expect, type Page, test } from '@playwright/test'
-
-async function scan(page: Page, code: string) {
-  await page.keyboard.type(code, { delay: 5 })
-  await page.keyboard.press('Enter')
-}
+import { nav, scan, start } from './helpers'
 
 // Demo barcodes are generated in a fixed order: shirt M is the first, blue silk the 8th.
 const SHIRT_M = '2000000000015'
 const SILK = '2000000000114'
 
 test.beforeEach(async ({ page }) => {
-  await page.goto('/#/menu')
-  await page.getByRole('button', { name: 'နမူနာ ပစ္စည်း ထည့်ရန်' }).click()
-  await expect(page.getByRole('button', { name: 'နမူနာ ပစ္စည်း ဖျက်ရန်' })).toBeVisible()
-  await page.goto('/#/')
+  await start(page)
+  await nav(page, '#/')
   await expect(page.getByTestId('scan-area')).toBeVisible()
 })
 
@@ -46,7 +40,7 @@ test('sell one shirt + one fabric cut, pay cash, see it in history', async ({ pa
   await expect(page.getByTestId('total')).toHaveText('0')
 
   // History shows it, with the fabric exactly as entered
-  await page.goto('/#/sales')
+  await nav(page, '#/sales')
   await expect(page.getByText('အရောင်း 1 ခု — 32,000 ကျပ်')).toBeVisible()
   await page.getByRole('button', { name: /A-000001/ }).click()
   await expect(page.getByText('2 ကိုက် 1 မိုက်')).toBeVisible()
@@ -84,16 +78,16 @@ test('mixed units stay as entered; remove last; unknown barcode; split payment',
 })
 
 test('practice mode records nothing', async ({ page }) => {
-  await page.goto('/#/settings')
+  await nav(page, '#/settings')
   await page.getByLabel('လေ့ကျင့်ရန် မုဒ်').check()
   await page.getByRole('button', { name: 'သိမ်းရန်' }).click()
-  await page.goto('/#/')
+  await nav(page, '#/')
   await expect(page.getByText('လေ့ကျင့်ရန် — အရောင်း မမှတ်ပါ')).toBeVisible()
   await scan(page, SHIRT_M)
   await page.getByRole('button', { name: 'ငွေရှင်းရန်' }).click()
   await page.getByRole('button', { name: 'ကွက်တိ' }).click()
   await page.getByRole('button', { name: /ပြီးပြီ/ }).click()
   await expect(page.getByText('လေ့ကျင့်မှု ပြီးပါပြီ (မမှတ်ပါ)')).toBeVisible()
-  await page.goto('/#/sales')
+  await nav(page, '#/sales')
   await expect(page.getByText('အရောင်း 0 ခု — 0 ကျပ်')).toBeVisible()
 })
