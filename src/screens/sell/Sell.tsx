@@ -20,7 +20,8 @@ import { useScanner } from '../../ui/useScanner'
 import { LengthEntry } from './LengthEntry'
 import { Payment } from './Payment'
 import { PhotoGrid, VariantPick } from './PhotoGrid'
-import { lengthLine, pieceItem, useStoredCart } from './lines'
+import { getPendingCredit, lengthLine, pieceItem, setPendingCredit, useStoredCart } from './lines'
+import { creditLeft, payOutCredit } from '../../db/returns'
 
 type Flash = { ok: boolean; text: string }
 type Done = { saleId: string; practice: boolean; totalKs: number; changeKs: number }
@@ -46,6 +47,17 @@ function SellScreen({ settings }: { settings: Settings }) {
   const [editKey, setEditKey] = useState<string>()
   const [heldOpen, setHeldOpen] = useState(false)
   const [receipt, setReceipt] = useState<string>()
+  const [creditCn, setCreditCn] = useState(getPendingCredit)
+  const [cashOut, setCashOut] = useState(false)
+  const creditLeftKs = useLiveQuery(async () => (creditCn ? creditLeft(creditCn) : 0), [creditCn])
+  const clearCredit = () => {
+    setPendingCredit(undefined)
+    setCreditCn(undefined)
+  }
+  // Credit fully used (or paid out): forget it.
+  useEffect(() => {
+    if (creditCn && creditLeftKs === 0) clearCredit()
+  }, [creditCn, creditLeftKs])
 
   const photos = useLiveQuery(async () => {
     const ps = await db.products.bulkGet([...new Set(lines.map((l) => l.productId))])
@@ -100,12 +112,12 @@ function SellScreen({ settings }: { settings: Settings }) {
     addProduct(p, v)
   }
 
-  async function finish(payments: Parameters<typeof completeSale>[1]) {
-    const r = await completeSale(lines, payments)
+  async function finish(payments: Parameters<typeof completeSale>[1], creditBackKs: number) {
+    const r = await completeSale(lines, payments, 0, creditCn && creditBackKs > 0 ? { cnId: creditCn, method: 'cash', amountKs: creditBackKs } : undefined)
     setPaying(false)
     setLines([])
     setFlash(undefined)
-    setDone({ saleId: r.sale.id, practice: r.practice, totalKs: r.sale.totalKs, changeKs: payments.reduce((s, p) => s + (p.changeKs ?? 0), 0) })
+    setDone({ saleId: r.sale.id, practice: r.practice, totalKs: r.sale.totalKs, changeKs: payments.reduce((s, p) => s + (p.changeKs ?? 0), 0) + creditBackKs })
   }
 
   // Back to a fresh sell screen by itself after a sale.
@@ -164,6 +176,35 @@ function SellScreen({ settings }: { settings: Settings }) {
         </Btn>
       </header>
       {settings.practiceMode && <div className="bg-orange-500 py-2 text-center text-2xl font-bold text-white">{t('sell.practiceBanner')}</div>}
+      {creditCn && !!creditLeftKs && (
+        <div className="flex items-center gap-3 bg-violet-100 px-4 py-2 text-xl text-violet-900" data-testid="credit-banner">
+          <span className="flex-1">↩ {t('sell.creditBanner', { amount: formatKs(creditLeftKs), id: creditCn })}</span>
+          <Btn variant="plain" onClick={() => setCashOut(true)}>
+            {t('sell.creditCashOut')}
+          </Btn>
+        </div>
+      )}
+      {cashOut && creditCn && (
+        <Modal onClose={() => setCashOut(false)}>
+          <BlockScans />
+          <p className="mb-4 text-3xl font-bold">{t('sell.creditCashOutConfirm', { amount: formatKs(creditLeftKs ?? 0) })}</p>
+          <div className="grid grid-cols-2 gap-3">
+            <Btn variant="plain" onClick={() => setCashOut(false)}>
+              {t('common.cancel')}
+            </Btn>
+            <Btn
+              variant="ok"
+              onClick={async () => {
+                await payOutCredit(creditCn, 'cash', creditLeftKs ?? 0)
+                setCashOut(false)
+                clearCredit()
+              }}
+            >
+              {t('common.ok')}
+            </Btn>
+          </div>
+        </Modal>
+      )}
 
       <div className="grid min-h-0 flex-1 grid-rows-[1fr_auto] lg:grid-cols-[1fr_26rem] lg:grid-rows-1">
         <section className="flex min-h-0 flex-col">
@@ -218,7 +259,15 @@ function SellScreen({ settings }: { settings: Settings }) {
         </aside>
       </div>
 
-      {paying && <Payment totalKs={totals.totalKs} settings={settings} onBack={() => setPaying(false)} onFinish={finish} />}
+      {paying && (
+        <Payment
+          totalKs={totals.totalKs}
+          settings={settings}
+          credit={creditCn && creditLeftKs ? { cnId: creditCn, leftKs: creditLeftKs } : undefined}
+          onBack={() => setPaying(false)}
+          onFinish={finish}
+        />
+      )}
 
       {grid && (
         <PhotoGrid

@@ -4,7 +4,7 @@ Offline-first point of sale for a Myanmar clothing & fabric shop: Android tablet
 
 **Live test version:** https://ashed25.github.io/u-ahi-fabric-pos/
 
-> Status: phases 0, a, b and c are done (products, barcodes, labels, import, backup, selling, payments, sales history, **fabric rolls, remnants, stock**). Next: returns, reports, users/PINs, cloud sync. There are no PINs yet, so don't use it in the shop yet.
+> Status: phases 0, a–d are done (products, barcodes, labels, import, backup, selling, payments, sales history, fabric rolls, remnants, stock, **returns/exchanges, voids, daily summary**). Next: reports & CT, users/PINs, cloud sync. There are no PINs yet, so don't use it in the shop yet.
 
 ## No scanner yet? Three ways to "scan"
 
@@ -13,6 +13,7 @@ Offline-first point of sale for a Myanmar clothing & fabric shop: Android tablet
 | **Sell screen → ဓာတ်ပုံဖြင့် ရွေးရန်** | Type a barcode number (e.g. `2000000000015`) and tap **ရှာရန်**, or type part of a name, or just tap the photo. |
 | **Tablet camera** (Android Chrome) | In *ဓာတ်ပုံဖြင့် ရွေးရန်* or *စကန်နာ စမ်းရန်*, tap **📷 ကင်မရာဖြင့် ဖတ်ရန်** and point the back camera at a printed barcode (or at the barcode book on the laptop screen). Allow camera access when asked. |
 | **Scanner test screen** | Type the digits in the box to check what a barcode is. |
+| **Your phone** | Open the link on the phone (Android or iPhone) and use **📷 ကင်မရာဖြင့် ဖတ်ရန်**. Each device keeps its own data, so load the demo on the phone too. Show the barcode book on the laptop screen and scan it with the phone. |
 
 Demo barcodes to type: shirt M `2000000000015`, shirt XL `2000000000039`, blue silk `2000000000114`, white cotton `2000000000121`, purple lace `2000000000138`, printed cotton `2000000000145`, towel `8851234567890`. The full list with pictures is in the barcode book (Menu → labels → ဘားကုဒ် စာအုပ်).
 
@@ -37,8 +38,13 @@ Demo barcodes to type: shirt M `2000000000015`, shirt XL `2000000000039`, blue s
    - **Printed cotton** has only 18" left, so the stock screen suggests selling it as a remnant. Tap ✂ အစ → *one price for all* → e.g. 1,500. On the sell screen, *အစ အကုန်ယူ* sells the whole piece.
    - **+ လိပ်အသစ် ဝင်ရန်** receives a new roll; **+ ဝင်** receives clothes; **ပြင်ရန်** corrects stock (a reason is required); **🏷 လိပ် စာကပ်** prints a roll label.
    - **📋 လက်ကျန် စစ်ရန်** (stock count / opening stock): start a count, scan or tap each item, and enter what is really there.
-9. **Scanner test (စကန်နာ စမ်းရန်):** shows exactly what the scanner sends, if a scan doesn't work.
-10. When you are done testing, Menu → **နမူနာ ပစ္စည်း ဖျက်ရန်** (Remove demo products). Test sales stay in the history. To start completely clean, clear the site data in Chrome (Settings → Site settings → this site → Clear data).
+9. **Returns:** Menu → **အရောင်း မှတ်တမ်း** → open a sale → **↩ ပြန်လဲ / ပြန်အမ်း**. Choose what comes back (fabric: back on the roll, or write it off), write a reason, then:
+   - **ငွေ ပြန်အမ်း** (refund): pick how the money goes back. A credit note `CN-A-000001` is recorded and stock goes back.
+   - **ပစ္စည်း ပြန်လဲ** (exchange): the sell screen opens with a purple *exchange credit* bar. Scan the new items; the credit pays for them. Pay any extra as usual, or get the leftover back in cash.
+   - **ပယ်ဖျက်ရန်** (void): only for a sale rung up by mistake. The number stays, marked VOID.
+10. **Daily summary:** Menu → **📊 ယနေ့ အနှစ်ချုပ်**: sales, money per payment method, returns, net, what was sold, compared with yesterday and the same day last week. An optional cash check (count the drawer) can be turned on in Settings.
+11. **Scanner test (စကန်နာ စမ်းရန်):** shows exactly what the scanner sends, if a scan doesn't work.
+12. When you are done testing, Menu → **နမူနာ ပစ္စည်း ဖျက်ရန်** (Remove demo products). Test sales stay in the history. To start completely clean, clear the site data in Chrome (Settings → Site settings → this site → Clear data).
 
 **Install on the tablet:** in Chrome, menu ⋮ → *Add to Home screen / Install app*. It then works offline.
 

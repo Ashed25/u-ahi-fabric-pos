@@ -128,11 +128,16 @@ export interface SaleLine {
   wholeRemnant?: boolean
 }
 
+/**
+ * Money in for a sale (saleId = sale id), or money paid back on a credit note
+ * (saleId = credit note id, negative amountKs, with `at`). Method 'credit' = paid with exchange credit (ref = credit note id).
+ */
 export interface Payment {
   id?: number
   saleId: string
   method: string
   amountKs: number
+  at?: number // payouts only
   ref?: string
   tenderedKs?: number
   changeKs?: number
@@ -159,6 +164,7 @@ export interface CreditNote {
 export interface CreditLine {
   id?: number
   creditId: string
+  saleId: string
   saleLineId: number
   qty?: number
   lengthTenths?: number
@@ -221,6 +227,8 @@ export class PosDB extends Dexie {
       audit: '++id, at, action, entity',
       outbox: '++id, at',
     })
+    // v2: find returns by sale
+    this.version(2).stores({ creditLines: '++id, creditId, saleId, saleLineId' })
   }
 }
 

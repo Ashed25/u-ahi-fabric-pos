@@ -4,7 +4,7 @@ import { formatEntered, formatInches } from '../core/length'
 import { formatKs } from '../core/money'
 import type { Payment, Sale, SaleLine } from '../db/schema'
 import type { Settings } from '../db/settings'
-import { unitName } from './format'
+import { methodName, unitName } from './format'
 
 type Row = { left: string; right?: string; bold?: boolean; size?: number; center?: boolean; small?: boolean; rule?: boolean }
 
@@ -37,8 +37,7 @@ export function receiptRows(t: TFunction, lang: string, s: Settings, d: { sale: 
   if (d.sale.ctKs) rows.push({ left: t('receipt.ct'), right: ks(d.sale.ctKs) })
   rows.push({ left: t('receipt.total'), right: `${ks(d.sale.totalKs)} ${t('common.ks')}`, bold: true, size: 32 })
   for (const p of d.payments) {
-    const m = s.paymentMethods.find((x) => x.code === p.method)
-    rows.push({ left: `${m ? (lang === 'en' ? m.nameEn : m.nameMy) : p.method}${p.ref ? ` #${p.ref}` : ''}`, right: ks(p.tenderedKs ?? p.amountKs) })
+    rows.push({ left: `${methodName(t, s.paymentMethods, p.method, lang)}${p.ref ? ` #${p.ref}` : ''}`, right: ks(p.tenderedKs ?? p.amountKs) })
     if (p.changeKs) rows.push({ left: t('pay.change'), right: ks(p.changeKs) })
   }
   rows.push({ left: '', rule: true })

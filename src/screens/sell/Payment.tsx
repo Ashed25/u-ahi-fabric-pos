@@ -3,16 +3,31 @@ import { useTranslation } from 'react-i18next'
 import { formatKs } from '../../core/money'
 import type { PaymentInput } from '../../db/sales'
 import type { Settings } from '../../db/settings'
+import { methodName } from '../../ui/format'
 import { Btn, toInt } from '../../ui/kit'
 import { useScanner } from '../../ui/useScanner'
 
 const NOTES = [1000, 5000, 10000, 20000]
 
 /** Cash with note buttons and a huge change figure; mobile/card with optional reference; split allowed. */
-export function Payment({ totalKs, settings, onBack, onFinish }: { totalKs: number; settings: Settings; onBack: () => void; onFinish: (p: PaymentInput[]) => Promise<void> }) {
+export function Payment({
+  totalKs,
+  settings,
+  credit,
+  onBack,
+  onFinish,
+}: {
+  totalKs: number
+  settings: Settings
+  credit?: { cnId: string; leftKs: number } // exchange credit from a return
+  onBack: () => void
+  onFinish: (p: PaymentInput[], creditBackKs: number) => Promise<void>
+}) {
   const { t, i18n } = useTranslation()
   const methods = settings.paymentMethods.filter((m) => m.active)
-  const [paid, setPaid] = useState<PaymentInput[]>([])
+  const creditUsed = credit ? Math.min(credit.leftKs, totalKs) : 0
+  const creditBack = credit ? credit.leftKs - creditUsed : 0 // new items cost less: give the rest back in cash
+  const [paid, setPaid] = useState<PaymentInput[]>(credit && creditUsed ? [{ method: 'credit', amountKs: creditUsed, ref: credit.cnId }] : [])
   const [method, setMethod] = useState(methods[0]?.code ?? 'cash')
   const [tendered, setTendered] = useState(0)
   const [amount, setAmount] = useState('')
@@ -24,10 +39,7 @@ export function Payment({ totalKs, settings, onBack, onFinish }: { totalKs: numb
   const due = totalKs - paid.reduce((s, p) => s + p.amountKs, 0)
   const isCash = method === 'cash'
   const m = methods.find((x) => x.code === method)
-  const name = (code: string) => {
-    const x = settings.paymentMethods.find((p) => p.code === code)
-    return x ? (i18n.language === 'en' ? x.nameEn : x.nameMy) : code
-  }
+  const name = (code: string) => methodName(t, settings.paymentMethods, code, i18n.language)
   const otherAmount = amount === '' ? due : (toInt(amount) ?? 0)
   const change = tendered - due
 
@@ -40,6 +52,7 @@ export function Payment({ totalKs, settings, onBack, onFinish }: { totalKs: numb
       ? { method, amountKs: otherAmount, ref: ref.trim() || undefined }
       : undefined
   const covers = !!current && current.amountKs === due
+  const fullyPaid = due === 0 // e.g. exchange credit covers everything
 
   function choose(code: string) {
     setMethod(code)
@@ -50,10 +63,10 @@ export function Payment({ totalKs, settings, onBack, onFinish }: { totalKs: numb
   }
 
   async function finish() {
-    if (!current || !covers) return
+    if (!fullyPaid && (!current || !covers)) return
     setBusy(true)
     try {
-      await onFinish([...paid, current])
+      await onFinish(fullyPaid ? paid : [...paid, current!], creditBack)
     } catch (e) {
       setError(String(e))
       setBusy(false)
@@ -80,9 +93,11 @@ export function Payment({ totalKs, settings, onBack, onFinish }: { totalKs: numb
                 </span>
                 <span className="flex items-center gap-2">
                   {formatKs(p.amountKs)}
-                  <button className="min-h-12 w-12 text-red-700" aria-label={t('common.remove')} onClick={() => setPaid(paid.filter((_, j) => j !== i))}>
-                    ✕
-                  </button>
+                  {p.method !== 'credit' && (
+                    <button className="min-h-12 w-12 text-red-700" aria-label={t('common.remove')} onClick={() => setPaid(paid.filter((_, j) => j !== i))}>
+                      ✕
+                    </button>
+                  )}
                 </span>
               </div>
             ))}
@@ -102,7 +117,16 @@ export function Payment({ totalKs, settings, onBack, onFinish }: { totalKs: numb
         </section>
 
         <section className="space-y-3">
-          {isCash ? (
+          {fullyPaid ? (
+            <div className="rounded-2xl bg-green-100 p-4 text-center text-green-900">
+              <div className="text-2xl">{t(creditBack > 0 ? 'pay.creditBack' : 'pay.paidByCredit')}</div>
+              {creditBack > 0 && (
+                <div className="text-7xl font-bold" data-testid="change">
+                  {formatKs(creditBack)}
+                </div>
+              )}
+            </div>
+          ) : isCash ? (
             <>
               <div className="rounded-2xl border-2 border-slate-300 p-4">
                 <div className="text-xl">{t('pay.received')}</div>
@@ -158,7 +182,7 @@ export function Payment({ totalKs, settings, onBack, onFinish }: { totalKs: numb
                 {t('pay.addPart')}
               </Btn>
             ) : (
-              <Btn variant="ok" className="min-h-20 text-3xl" disabled={!covers || busy} onClick={finish}>
+              <Btn variant="ok" className="min-h-20 text-3xl" disabled={!(covers || fullyPaid) || busy} onClick={finish}>
                 ✓ {t('pay.finish')}
               </Btn>
             )}

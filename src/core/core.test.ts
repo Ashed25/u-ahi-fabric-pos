@@ -154,6 +154,14 @@ describe('scanner input', () => {
   it('ignores slow human typing', () =>
     expect(burst(new ScanBuffer(), [...digits('12345', 'en'), ENTER], 0, 300)).toEqual([]))
   it('ignores too-short input', () => expect(burst(new ScanBuffer(), [...digits('12', 'en'), ENTER])).toEqual([]))
+  it('one late key (busy tablet / Bluetooth) does not break a scan', () => {
+    const s = new ScanBuffer()
+    const keys = [...digits('2000000000114', 'en'), ENTER]
+    const times = keys.map((_, i) => 1000 + i * 10 + (i >= 1 ? 180 : 0)) // 180 ms stall after the first digit
+    expect(keys.map((k, i) => s.feed({ ...k, timeStamp: times[i] })).filter(Boolean)).toEqual(['2000000000114'])
+  })
+  it('two scans back to back', () =>
+    expect(burst(new ScanBuffer(), [...digits('2000000000015', 'en'), ENTER, ...digits('2000000000114', 'en'), ENTER])).toEqual(['2000000000015', '2000000000114']))
 })
 
 describe('Yangon time & financial year', () => {

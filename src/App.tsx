@@ -5,7 +5,9 @@ import { Backup } from './screens/Backup'
 import { Home } from './screens/Home'
 import { SalesHistory, SaleView } from './screens/SalesHistory'
 import { SettingsScreen } from './screens/SettingsScreen'
+import { Return } from './screens/Return'
 import { Sell } from './screens/sell/Sell'
+import { Today } from './screens/Today'
 import { StockCount } from './screens/stock/StockCount'
 import { StockList } from './screens/stock/StockList'
 import { StockProduct } from './screens/stock/StockProduct'
@@ -43,6 +45,10 @@ export default function App() {
       return path[1] ? <StockProduct key={path[1]} id={Number(path[1])} /> : <StockList />
     case 'count':
       return <StockCount />
+    case 'return':
+      return <Return key={path[1]} saleId={decodeURIComponent(path[1] ?? '')} />
+    case 'today':
+      return <Today />
     case 'products':
       if (path[1] === 'new') return <ProductEdit key="new" />
       return path[1] ? <ProductEdit key={path[1]} id={Number(path[1])} /> : <Products />

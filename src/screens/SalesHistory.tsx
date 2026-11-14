@@ -7,8 +7,9 @@ import { formatKs } from '../core/money'
 import { saleDetail } from '../db/sales'
 import { type Sale, db } from '../db/schema'
 import { useSettings } from '../db/useSettings'
-import { unitName } from '../ui/format'
-import { Btn, Screen, inputCls } from '../ui/kit'
+import { methodName, unitName } from '../ui/format'
+import { voidSale } from '../db/returns'
+import { Btn, Field, Modal, Screen, inputCls } from '../ui/kit'
 import { ReceiptModal } from '../ui/ReceiptModal'
 import { go } from '../ui/router'
 
@@ -37,10 +38,7 @@ export function SalesHistory() {
   }, [day, q])
   if (!settings || !data) return null
 
-  const method = (code: string) => {
-    const m = settings.paymentMethods.find((x) => x.code === code)
-    return m ? (i18n.language === 'en' ? m.nameEn : m.nameMy) : code
-  }
+  const method = (code: string) => methodName(t, settings.paymentMethods, code, i18n.language)
   const completed = data.sales.filter((s) => s.status === 'completed')
   const total = completed.reduce((s, x) => s + x.totalKs, 0)
 
@@ -84,15 +82,28 @@ export function SaleView({ id }: { id: string }) {
   const { t, i18n } = useTranslation()
   const lang = i18n.language === 'en' ? 'en' : 'my'
   const settings = useSettings()
-  const d = useLiveQuery(() => saleDetail(id), [id])
+  const d = useLiveQuery(async () => {
+    const detail = await saleDetail(id)
+    const credits = await db.creditNotes.where('saleId').equals(id).toArray()
+    const payouts = await db.payments.where('saleId').anyOf(credits.map((c) => c.id)).toArray()
+    return detail && { ...detail, credits, payouts }
+  }, [id])
   const [receipt, setReceipt] = useState(false)
+  const [voiding, setVoiding] = useState(false)
+  const [voidReason, setVoidReason] = useState('')
+  const [error, setError] = useState('')
   if (!settings || d === undefined) return null
 
-  const { sale, lines, payments } = d
-  const method = (code: string) => {
-    const m = settings.paymentMethods.find((x) => x.code === code)
-    return m ? (lang === 'en' ? m.nameEn : m.nameMy) : code
+  const { sale, lines, payments, credits, payouts } = d
+  async function doVoid() {
+    try {
+      await voidSale(sale.id, voidReason)
+      setVoiding(false)
+    } catch (e) {
+      setError(/reason/i.test(String(e)) ? t('return.errReason') : String(e))
+    }
   }
+  const method = (code: string) => methodName(t, settings.paymentMethods, code, lang)
   return (
     <Screen title={`${t('receipt.no')} ${sale.id}`} back="#/sales">
       <div className="mx-auto max-w-3xl space-y-4">
@@ -143,13 +154,55 @@ export function SaleView({ id }: { id: string }) {
             </p>
           ))}
         </div>
-        {settings.receiptEnabled && (
-          <Btn variant="plain" onClick={() => setReceipt(true)}>
-            🧾 {t('receipt.show')}
-          </Btn>
+        {credits.length > 0 && (
+          <section className="rounded-2xl bg-violet-50 p-4">
+            <h2 className="mb-2 text-xl font-bold">↩ {t('return.list')}</h2>
+            {credits.map((c) => (
+              <p key={c.id} className="text-lg">
+                <b>{c.id}</b> · {dateKey(c.at)} {timeText(c.at)} · {t(c.type === 'refund' ? 'return.refund' : 'return.exchange')} · <b>{formatKs(c.totalKs)}</b> · {c.reason}
+                {payouts
+                  .filter((p) => p.saleId === c.id)
+                  .map((p) => ` · ${method(p.method)} −${formatKs(-p.amountKs)}`)
+                  .join('')}
+              </p>
+            ))}
+          </section>
         )}
+        <div className="flex flex-wrap gap-3">
+          {settings.receiptEnabled && (
+            <Btn variant="plain" onClick={() => setReceipt(true)}>
+              🧾 {t('receipt.show')}
+            </Btn>
+          )}
+          {sale.status === 'completed' && (
+            <Btn onClick={() => go(`#/return/${sale.id}`)}>↩ {t('return.button')}</Btn>
+          )}
+          {sale.status === 'completed' && credits.length === 0 && (
+            <Btn variant="danger" onClick={() => setVoiding(true)}>
+              ✕ {t('void.button')}
+            </Btn>
+          )}
+        </div>
       </div>
       {receipt && <ReceiptModal saleId={sale.id} settings={settings} copy onClose={() => setReceipt(false)} />}
+      {voiding && (
+        <Modal onClose={() => setVoiding(false)}>
+          <h2 className="mb-2 text-2xl font-bold text-red-800">{t('void.title', { id: sale.id })}</h2>
+          <p className="mb-4 text-xl">{t('void.hint')}</p>
+          <Field label={t('return.reason')}>
+            <input className={inputCls} value={voidReason} onChange={(e) => setVoidReason(e.target.value)} />
+          </Field>
+          {error && <p className="mt-3 rounded-xl bg-red-100 p-3 text-xl font-bold text-red-900">{error}</p>}
+          <div className="mt-4 grid grid-cols-2 gap-3">
+            <Btn variant="plain" onClick={() => setVoiding(false)}>
+              {t('common.cancel')}
+            </Btn>
+            <Btn variant="danger" onClick={doVoid}>
+              {t('void.confirm')}
+            </Btn>
+          </div>
+        </Modal>
+      )}
     </Screen>
   )
 }

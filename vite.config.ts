@@ -11,7 +11,7 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
-      workbox: { globPatterns: ['**/*.{js,css,html,woff,woff2,png,svg}'] },
+      workbox: { globPatterns: ['**/*.{js,css,html,woff,woff2,png,svg,wasm}'] },
       manifest: {
         name: 'ဦးအဟိ အထည်ဆိုင်',
         short_name: 'ဦးအဟိ POS',

@@ -39,6 +39,7 @@ export const DEFAULT_SETTINGS = {
   a4Layout: { cols: 3, rows: 8, wMm: 70, hMm: 37, topMm: 0.5, leftMm: 0, gapXMm: 0, gapYMm: 0 },
   devicePrefix: 'A',
   saleSeq: 0, // last completed sale on this device
+  creditSeq: 0, // last credit note (return) on this device
   practiceMode: false,
   lang: 'my' as 'my' | 'en',
   largeText: false,

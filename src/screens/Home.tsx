@@ -8,6 +8,7 @@ import { Btn, Screen } from '../ui/kit'
 import { go } from '../ui/router'
 
 const TILES = [
+  ['today', '📊', 'today.title'],
   ['sales', '🧾', 'history.title'],
   ['stock', '📦', 'stock.title'],
   ['products', '👕', 'products.title'],

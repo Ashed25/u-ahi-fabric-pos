@@ -99,7 +99,7 @@ export function ScannerTest() {
           </thead>
           <tbody>
             {raw.map((r, i) => (
-              <tr key={i} className={r.gap > 100 ? 'text-slate-400' : ''}>
+              <tr key={i} className={r.gap > 60 ? 'text-slate-400' : ''}>
                 <td>{r.code}</td>
                 <td>{r.key}</td>
                 <td>{digitOf({ ...r, timeStamp: 0 }) ?? '–'}</td>

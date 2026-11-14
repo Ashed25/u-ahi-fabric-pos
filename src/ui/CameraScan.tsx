@@ -2,18 +2,30 @@ import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Btn } from './kit'
 
-// Chrome's built-in barcode reader (Android, ChromeOS, macOS). Not in TypeScript's DOM types yet.
-interface DetectedBarcode {
-  rawValue: string
+interface Detector {
+  detect(source: HTMLVideoElement): Promise<{ rawValue: string }[]>
 }
-declare class BarcodeDetector {
-  constructor(o: { formats: string[] })
-  detect(source: HTMLVideoElement): Promise<DetectedBarcode[]>
+type DetectorCtor = new (o: { formats: string[] }) => Detector
+const FORMATS = ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128']
+
+/**
+ * Chrome on Android has a built-in barcode reader. Elsewhere (iPhone, laptop webcam) load the
+ * ZXing reader on demand; its .wasm is bundled with the app so it also works offline.
+ */
+async function makeDetector(): Promise<Detector> {
+  const native = (window as unknown as { BarcodeDetector?: DetectorCtor }).BarcodeDetector
+  if (native) return new native({ formats: FORMATS })
+  const [{ BarcodeDetector, prepareZXingModule }, { default: wasmUrl }] = await Promise.all([
+    import('barcode-detector/ponyfill'),
+    import('zxing-wasm/reader/zxing_reader.wasm?url'),
+  ])
+  prepareZXingModule({ overrides: { locateFile: (path: string, prefix: string) => (path.endsWith('.wasm') ? wasmUrl : prefix + path) } })
+  return new BarcodeDetector({ formats: FORMATS as never })
 }
 
-export const cameraScanSupported = () => typeof window !== 'undefined' && 'BarcodeDetector' in window && !!navigator.mediaDevices?.getUserMedia
+export const cameraScanSupported = () => typeof navigator !== 'undefined' && !!navigator.mediaDevices?.getUserMedia
 
-/** Backup scanner: reads a barcode with the tablet's back camera. */
+/** Backup scanner: reads a barcode with the device camera (back camera on phones/tablets). */
 export function CameraScan({ onCode, onClose }: { onCode: (code: string) => void; onClose: () => void }) {
   const { t } = useTranslation()
   const video = useRef<HTMLVideoElement>(null)
@@ -26,11 +38,11 @@ export function CameraScan({ onCode, onClose }: { onCode: (code: string) => void
     let timer: ReturnType<typeof setInterval> | undefined
     let done = false
     ;(async () => {
+      const detector = await makeDetector()
       stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
       if (done || !video.current) return stream.getTracks().forEach((tr) => tr.stop()) // closed while starting
       video.current.srcObject = stream
       await video.current.play()
-      const detector = new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128'] })
       timer = setInterval(async () => {
         if (done || !video.current) return
         const found = (await detector.detect(video.current).catch(() => []))[0]?.rawValue

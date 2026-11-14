@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@fontsource/noto-sans-myanmar": "^5.3.0",
+    "barcode-detector": "^3.2.3",
     "dexie": "^4.4.7",
     "dexie-export-import": "^4.4.2",
     "dexie-react-hooks": "^4.4.0",
@@ -20,7 +21,8 @@
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "react-i18next": "^18.0.1",
-    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz",
+    "zxing-wasm": "^3.1.6"
   },
   "devDependencies": {
     "@playwright/test": "^1.65.1",

@@ -7,8 +7,8 @@ import { type Settings, setSetting } from '../db/settings'
 import { useSettings } from '../db/useSettings'
 import { Btn, Field, Screen, inputCls } from '../ui/kit'
 
-type Draft = Pick<Settings, 'shopName' | 'shopAddress' | 'shopPhone' | 'tin' | 'roundStep' | 'roundMode' | 'receiptEnabled' | 'receiptFooter' | 'returnPolicy' | 'practiceMode' | 'devicePrefix' | 'paymentMethods' | 'ct' | 'remnantBelowTenths'>
-const KEYS: (keyof Draft)[] = ['shopName', 'shopAddress', 'shopPhone', 'tin', 'roundStep', 'roundMode', 'receiptEnabled', 'receiptFooter', 'returnPolicy', 'practiceMode', 'devicePrefix', 'paymentMethods', 'ct', 'remnantBelowTenths']
+type Draft = Pick<Settings, 'shopName' | 'shopAddress' | 'shopPhone' | 'tin' | 'roundStep' | 'roundMode' | 'receiptEnabled' | 'receiptFooter' | 'returnPolicy' | 'practiceMode' | 'devicePrefix' | 'paymentMethods' | 'ct' | 'remnantBelowTenths' | 'cashCheck'>
+const KEYS: (keyof Draft)[] = ['shopName', 'shopAddress', 'shopPhone', 'tin', 'roundStep', 'roundMode', 'receiptEnabled', 'receiptFooter', 'returnPolicy', 'practiceMode', 'devicePrefix', 'paymentMethods', 'ct', 'remnantBelowTenths', 'cashCheck']
 
 export function SettingsScreen() {
   const { t } = useTranslation()
@@ -108,6 +108,8 @@ export function SettingsScreen() {
             </div>
           ))}
         </div>
+
+        {toggle(t('settings.cashCheck'), d.cashCheck, (v) => set({ cashCheck: v }))}
 
         <h2 className="text-2xl font-bold">{t('settings.receipt')}</h2>
         {toggle(t('settings.receiptOn'), d.receiptEnabled, (v) => set({ receiptEnabled: v }))}

@@ -24,11 +24,13 @@ const isModifier = (e: KeyLike) => e.key === 'Shift' || e.code.startsWith('Shift
 
 export class ScanBuffer {
   private buf = ''
+  private start = 0
   private last = -Infinity
 
   constructor(
-    // 100 ms tolerates Bluetooth jitter; people typing digits are slower than this.
-    private maxGapMs = 100,
+    // Average per key: scanners ~1–20 ms, people typing 100+ ms. Averaging tolerates one late key (Bluetooth, busy tablet).
+    private avgMs = 60,
+    private resetMs = 500, // a pause this long starts a fresh buffer
     private minLength = 4,
   ) {}
 
@@ -37,7 +39,8 @@ export class ScanBuffer {
     const gap = e.timeStamp - this.last
     this.last = e.timeStamp
     if (isEnter(e)) {
-      const code = gap <= this.maxGapMs && this.buf.length >= this.minLength ? this.buf : null
+      const fast = this.buf.length >= this.minLength && (e.timeStamp - this.start) / this.buf.length <= this.avgMs
+      const code = fast ? this.buf : null
       this.buf = ''
       return code
     }
@@ -46,8 +49,10 @@ export class ScanBuffer {
       if (!isModifier(e)) this.buf = ''
       return null
     }
-    // A slow key starts a new buffer: humans typing digits never form a scan.
-    this.buf = gap <= this.maxGapMs ? this.buf + d : d
+    if (!this.buf || gap > this.resetMs) {
+      this.buf = d
+      this.start = e.timeStamp
+    } else this.buf += d
     return null
   }
 

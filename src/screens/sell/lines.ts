@@ -32,6 +32,24 @@ export function lengthLine(t: TFunction, p: Product, entered: EnteredLength, s: 
   }
 }
 
+// Exchange credit waiting to be used by the next sale (credit note id).
+const CREDIT_KEY = 'u-ahi-credit'
+export function getPendingCredit(): string | undefined {
+  try {
+    return localStorage.getItem(CREDIT_KEY) ?? undefined
+  } catch {
+    return undefined
+  }
+}
+export function setPendingCredit(cnId?: string) {
+  try {
+    if (cnId) localStorage.setItem(CREDIT_KEY, cnId)
+    else localStorage.removeItem(CREDIT_KEY)
+  } catch {
+    // storage blocked: the credit stays on the credit note and can be paid out from sales history
+  }
+}
+
 const KEY = 'u-ahi-cart'
 
 /** The open sale survives a reload or power cut. Per-device convenience only, so localStorage is fine. */

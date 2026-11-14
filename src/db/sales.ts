@@ -1,5 +1,6 @@
 import { type CartLine, cartTotals } from '../core/cart'
 import { defaultRoll, sellableRolls } from '../core/stock'
+import { creditLeft } from './returns'
 import { type Payment, type Sale, type SaleLine, db } from './schema'
 import { getSetting, setSetting } from './settings'
 
@@ -17,8 +18,14 @@ export interface CompleteResult {
  * so a failed sale never uses up a number (no gaps) and never half-saves.
  * Practice mode validates the same way but writes nothing.
  */
-export async function completeSale(lines: CartLine[], payments: PaymentInput[], userId = 0): Promise<CompleteResult> {
-  return db.transaction('rw', [db.sales, db.saleLines, db.payments, db.settings, db.variants, db.rolls, db.stockMoves], async () => {
+export async function completeSale(
+  lines: CartLine[],
+  payments: PaymentInput[],
+  userId = 0,
+  // Exchange credit worth more than the new items: the rest is paid back (in the same transaction).
+  creditPayout?: { cnId: string; method: string; amountKs: number },
+): Promise<CompleteResult> {
+  return db.transaction('rw', [db.sales, db.saleLines, db.payments, db.settings, db.variants, db.rolls, db.stockMoves, db.creditNotes], async () => {
     if (!lines.length) throw new Error('Empty sale')
     const ct = await getSetting('ct')
     const totals = cartTotals(lines, ct)
@@ -28,6 +35,10 @@ export async function completeSale(lines: CartLine[], payments: PaymentInput[], 
     }
     const paid = payments.reduce((s, p) => s + p.amountKs, 0)
     if (paid !== totals.totalKs) throw new Error(`Payments ${paid} ≠ total ${totals.totalKs}`)
+    for (const p of payments.filter((x) => x.method === 'credit')) {
+      const use = p.amountKs + (creditPayout && creditPayout.cnId === p.ref ? creditPayout.amountKs : 0)
+      if (!p.ref || use > (await creditLeft(p.ref))) throw new Error('Not enough exchange credit')
+    }
 
     const practice = await getSetting('practiceMode')
     const prefix = await getSetting('devicePrefix')
@@ -61,6 +72,7 @@ export async function completeSale(lines: CartLine[], payments: PaymentInput[], 
       await db.saleLines.add(row)
     }
     for (const p of payments) await db.payments.add({ ...p, saleId: sale.id })
+    if (creditPayout?.amountKs) await db.payments.add({ saleId: creditPayout.cnId, method: creditPayout.method, amountKs: -creditPayout.amountKs, at: now })
     await setSetting('saleSeq', seq)
     return { sale, practice }
   })
