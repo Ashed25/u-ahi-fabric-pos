@@ -126,6 +126,7 @@ export interface SaleLine {
   lineTotalKs: number
   remnantPct?: number
   wholeRemnant?: boolean
+  costKs?: number // cost of this line at the time of sale (when the product has a cost)
 }
 
 /**

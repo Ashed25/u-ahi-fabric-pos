@@ -4,7 +4,7 @@ Offline-first point of sale for a Myanmar clothing & fabric shop: Android tablet
 
 **Live test version:** https://ashed25.github.io/u-ahi-fabric-pos/
 
-> Status: phases 0, a–d are done (products, barcodes, labels, import, backup, selling, payments, sales history, fabric rolls, remnants, stock, **returns/exchanges, voids, daily summary**). Next: reports & CT, users/PINs, cloud sync. There are no PINs yet, so don't use it in the shop yet.
+> Status: phases 0, a–e are done (products, barcodes, labels, import, backup, selling, payments, sales history, fabric rolls, remnants, stock, returns/exchanges, voids, daily summary, **reports, CT report, Excel exports**). Next: users/PINs and audit log, then cloud sync. There are no PINs yet, so don't use it in the shop yet.
 
 ## No scanner yet? Three ways to "scan"
 
@@ -43,8 +43,10 @@ Demo barcodes to type: shirt M `2000000000015`, shirt XL `2000000000039`, blue s
    - **ပစ္စည်း ပြန်လဲ** (exchange): the sell screen opens with a purple *exchange credit* bar. Scan the new items; the credit pays for them. Pay any extra as usual, or get the leftover back in cash.
    - **ပယ်ဖျက်ရန်** (void): only for a sale rung up by mistake. The number stays, marked VOID.
 10. **Daily summary:** Menu → **📊 ယနေ့ အနှစ်ချုပ်**: sales, money per payment method, returns, net, what was sold, compared with yesterday and the same day last week. An optional cash check (count the drawer) can be turned on in Settings.
-11. **Scanner test (စကန်နာ စမ်းရန်):** shows exactly what the scanner sends, if a scan doesn't work.
-12. When you are done testing, Menu → **နမူနာ ပစ္စည်း ဖျက်ရန်** (Remove demo products). Test sales stay in the history. To start completely clean, clear the site data in Chrome (Settings → Site settings → this site → Clear data).
+11. **Reports:** Menu → **📈 အစီရင်ခံစာ**: day / week / month / quarter / financial year (Apr–Mar), ◀ ▶ to step back. Shows sales, returns, net, CT, **profit** (uses the cost entered on each product; sales of products without a cost are shown separately), payment methods, staff, and best sellers (fabric in ကိုက်/တောင်). **⬇ Excel** exports the report; *စာရင်းကိုင်အတွက်* exports all data for the accountant.
+    - **CT:** the CT button opens the quarterly Commercial Tax report (Q1 Apr–Jun … Q4 Jan–Mar) with an Excel export of the sale-by-sale schedule. When sales over the last 12 months reach 80% / 100% of 50,000,000 Ks (setting), a warning shows on the menu, daily summary and reports. To see it in the demo, set the threshold to e.g. 30,000 in Settings.
+12. **Scanner test (စကန်နာ စမ်းရန်):** shows exactly what the scanner sends, if a scan doesn't work.
+13. When you are done testing, Menu → **နမူနာ ပစ္စည်း ဖျက်ရန်** (Remove demo products). Test sales stay in the history. To start completely clean, clear the site data in Chrome (Settings → Site settings → this site → Clear data).
 
 **Install on the tablet:** in Chrome, menu ⋮ → *Add to Home screen / Install app*. It then works offline.
 

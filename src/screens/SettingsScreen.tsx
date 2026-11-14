@@ -5,10 +5,10 @@ import { audit } from '../db/audit'
 import { db } from '../db/schema'
 import { type Settings, setSetting } from '../db/settings'
 import { useSettings } from '../db/useSettings'
-import { Btn, Field, Screen, inputCls } from '../ui/kit'
+import { Btn, Field, Screen, inputCls, toInt } from '../ui/kit'
 
-type Draft = Pick<Settings, 'shopName' | 'shopAddress' | 'shopPhone' | 'tin' | 'roundStep' | 'roundMode' | 'receiptEnabled' | 'receiptFooter' | 'returnPolicy' | 'practiceMode' | 'devicePrefix' | 'paymentMethods' | 'ct' | 'remnantBelowTenths' | 'cashCheck'>
-const KEYS: (keyof Draft)[] = ['shopName', 'shopAddress', 'shopPhone', 'tin', 'roundStep', 'roundMode', 'receiptEnabled', 'receiptFooter', 'returnPolicy', 'practiceMode', 'devicePrefix', 'paymentMethods', 'ct', 'remnantBelowTenths', 'cashCheck']
+type Draft = Pick<Settings, 'shopName' | 'shopAddress' | 'shopPhone' | 'tin' | 'roundStep' | 'roundMode' | 'receiptEnabled' | 'receiptFooter' | 'returnPolicy' | 'practiceMode' | 'devicePrefix' | 'paymentMethods' | 'ct' | 'remnantBelowTenths' | 'cashCheck' | 'ctThresholdKs'>
+const KEYS: (keyof Draft)[] = ['shopName', 'shopAddress', 'shopPhone', 'tin', 'roundStep', 'roundMode', 'receiptEnabled', 'receiptFooter', 'returnPolicy', 'practiceMode', 'devicePrefix', 'paymentMethods', 'ct', 'remnantBelowTenths', 'cashCheck', 'ctThresholdKs']
 
 export function SettingsScreen() {
   const { t } = useTranslation()
@@ -130,6 +130,18 @@ export function SettingsScreen() {
             <div className="pt-8">{toggle(t('settings.ctInclusive'), d.ct.inclusive, (v) => set({ ct: { ...d.ct, inclusive: v } }))}</div>
           </div>
         )}
+
+        <Field label={t('settings.ctThreshold')} hint={t('settings.ctThresholdHint')}>
+          <input
+            className={`${inputCls} w-60`}
+            inputMode="numeric"
+            defaultValue={d.ctThresholdKs}
+            onChange={(e) => {
+              const n = toInt(e.target.value)
+              if (n) set({ ctThresholdKs: n })
+            }}
+          />
+        </Field>
 
         <h2 className="text-2xl font-bold">{t('settings.device')}</h2>
         <Field label={t('settings.prefix')} hint={t(hasSales ? 'settings.prefixLocked' : 'settings.prefixHint')}>

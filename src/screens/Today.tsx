@@ -10,6 +10,7 @@ import { db } from '../db/schema'
 import { useSettings } from '../db/useSettings'
 import { methodName } from '../ui/format'
 import { Btn, Screen, inputCls, toInt } from '../ui/kit'
+import { CtWarning } from './Reports'
 
 const DAY = 86_400_000
 
@@ -57,6 +58,7 @@ export function Today() {
   return (
     <Screen title={t('today.title')}>
       <div className="mx-auto max-w-4xl space-y-4">
+        <CtWarning />
         <div className="flex items-center gap-2">
           <Btn variant="plain" onClick={() => setDay(day - DAY)}>
             ◀

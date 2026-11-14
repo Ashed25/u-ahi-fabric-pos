@@ -1,4 +1,5 @@
 import { type CartLine, cartTotals } from '../core/cart'
+import { roundFraction } from '../core/pricing'
 import { defaultRoll, sellableRolls } from '../core/stock'
 import { creditLeft } from './returns'
 import { type Payment, type Sale, type SaleLine, db } from './schema'
@@ -25,7 +26,7 @@ export async function completeSale(
   // Exchange credit worth more than the new items: the rest is paid back (in the same transaction).
   creditPayout?: { cnId: string; method: string; amountKs: number },
 ): Promise<CompleteResult> {
-  return db.transaction('rw', [db.sales, db.saleLines, db.payments, db.settings, db.variants, db.rolls, db.stockMoves, db.creditNotes], async () => {
+  return db.transaction('rw', [db.sales, db.saleLines, db.payments, db.settings, db.variants, db.rolls, db.stockMoves, db.creditNotes, db.products], async () => {
     if (!lines.length) throw new Error('Empty sale')
     const ct = await getSetting('ct')
     const totals = cartTotals(lines, ct)
@@ -54,6 +55,9 @@ export async function completeSale(
         l.kind === 'piece'
           ? { saleId: sale.id, productId: l.productId, variantId: l.variantId, kind: 'piece', qty: l.qty, nameMy: l.nameMy, sub: l.sub || undefined, unitPriceKs: l.unitPriceKs, ctRateBp, lineTotalKs: l.unitPriceKs * l.qty }
           : { saleId: sale.id, productId: l.productId, kind: 'length', entered: l.entered, lengthTenths: l.lengthTenths, nameMy: l.nameMy, sub: l.sub || undefined, unitPriceKs: l.unitPriceKs, pricingUnit: l.pricingUnit, unitTenths: l.unitTenths, ctRateBp, lineTotalKs: l.lineTotalKs, remnantPct: l.remnantPct, wholeRemnant: l.wholeRemnant }
+      // Cost snapshot for profit reports: per piece, or per pricing unit for fabric.
+      const cost = (await db.products.get(l.productId))?.costKs
+      if (cost != null) row.costKs = l.kind === 'piece' ? cost * l.qty : roundFraction(cost * l.lengthTenths, l.unitTenths, 1, 'nearest')
       if (l.kind === 'piece') {
         const v = await db.variants.get(l.variantId)
         if (v) await db.variants.update(v.id!, { qty: v.qty - l.qty })

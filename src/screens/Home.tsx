@@ -6,10 +6,12 @@ import { setSetting } from '../db/settings'
 import { useSettings } from '../db/useSettings'
 import { Btn, Screen } from '../ui/kit'
 import { go } from '../ui/router'
+import { CtWarning } from './Reports'
 
 const TILES = [
   ['today', '📊', 'today.title'],
   ['sales', '🧾', 'history.title'],
+  ['reports', '📈', 'reports.title'],
   ['stock', '📦', 'stock.title'],
   ['products', '👕', 'products.title'],
   ['labels', '🏷', 'labels.title'],
@@ -50,6 +52,9 @@ export function Home() {
         </>
       }
     >
+      <div className="mx-auto mb-4 max-w-4xl">
+        <CtWarning />
+      </div>
       <div className="mx-auto grid max-w-4xl grid-cols-2 gap-4 md:grid-cols-3">
         {TILES.map(([route, icon, label]) => (
           <button
