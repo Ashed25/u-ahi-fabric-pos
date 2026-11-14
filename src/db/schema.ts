@@ -24,6 +24,7 @@ export interface Category {
   nameMy: string
   nameEn: string
   sort: number
+  demo?: boolean
 }
 
 export interface Product {
@@ -42,6 +43,7 @@ export interface Product {
   widthTenths?: number // length: display only
   quickCuts?: EnteredLength[] // length
   tagged?: boolean // tagging day: label is on the item
+  demo?: boolean // demo data, removable in one tap
   updatedAt: number
 }
 

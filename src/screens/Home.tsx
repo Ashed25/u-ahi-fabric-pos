@@ -1,4 +1,7 @@
+import { useState } from 'react'
+import { useLiveQuery } from 'dexie-react-hooks'
 import { useTranslation } from 'react-i18next'
+import { hasDemo, loadDemo, removeDemo } from '../db/demo'
 import { setSetting } from '../db/settings'
 import { useSettings } from '../db/useSettings'
 import { Btn, Screen } from '../ui/kit'
@@ -17,7 +20,17 @@ const TILES = [
 export function Home() {
   const { t } = useTranslation()
   const settings = useSettings()
-  if (!settings) return null
+  const hasDemoData = useLiveQuery(hasDemo, [])
+  const [busy, setBusy] = useState(false)
+  if (!settings || hasDemoData === undefined) return null
+  const run = (fn: () => Promise<unknown>) => async () => {
+    setBusy(true)
+    try {
+      await fn()
+    } finally {
+      setBusy(false)
+    }
+  }
   return (
     <Screen
       title={settings.shopName}
@@ -46,6 +59,18 @@ export function Home() {
             {t(label)}
           </button>
         ))}
+      </div>
+      <div className="mx-auto mt-8 max-w-4xl rounded-2xl border-2 border-dashed border-amber-400 bg-amber-50 p-4">
+        <p className="mb-3 text-xl">{t(hasDemoData ? 'demo.loadedHint' : 'demo.hint')}</p>
+        {hasDemoData ? (
+          <Btn variant="danger" disabled={busy} onClick={run(removeDemo)}>
+            {t('demo.remove')}
+          </Btn>
+        ) : (
+          <Btn disabled={busy} onClick={run(loadDemo)}>
+            {t('demo.load')}
+          </Btn>
+        )}
       </div>
     </Screen>
   )

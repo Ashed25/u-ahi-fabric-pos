@@ -1,7 +1,6 @@
 {
   "app.loading": "Please wait…",
   "lang.toggle": "မြန်မာ",
-
   "common.back": "Back",
   "common.add": "Add",
   "common.all": "All",
@@ -13,18 +12,14 @@
   "common.remove": "Remove",
   "common.save": "Save",
   "common.saved": "Saved",
-
   "home.largeText": "Large text",
   "home.normalText": "Normal text",
-
   "unit.inches": "inches",
-
   "products.title": "Products",
   "products.add": "New product",
   "products.search": "Search by name",
   "products.count": "{{count}} products",
   "products.hidden": "Hidden",
-
   "product.new": "New product",
   "product.kindPiece": "Piece",
   "product.kindLength": "Length",
@@ -56,7 +51,6 @@
   "product.errPrice": "Enter the price as a number",
   "product.errCost": "Enter the cost as a number",
   "product.errLow": "Enter the warning level as a number",
-
   "barcode.title": "Barcodes",
   "barcode.generated": "Shop code",
   "barcode.assignedShort": "Scanned in",
@@ -68,7 +62,6 @@
   "barcode.assigned": "{{code}} linked",
   "barcode.taken": "{{code}} is already used by “{{name}}”",
   "barcode.confirmRemove": "Remove barcode {{code}}?",
-
   "units.title": "Length units",
   "units.hint": "Changes only affect future sales. Past sales are not changed.",
   "units.nameMy": "Burmese",
@@ -76,7 +69,6 @@
   "units.inches": "Inches",
   "units.pricing": "Can price by",
   "units.invalid": "Enter a name and inches (e.g. 4.4) for every unit",
-
   "scanner.title": "Scanner test",
   "scanner.hint": "Scan any barcode. If the right digits appear, the scanner works.",
   "scanner.waiting": "Waiting for a scan…",
@@ -86,7 +78,6 @@
   "scanner.digits": "digits",
   "scanner.digit": "digit",
   "scanner.rawKeys": "Keys sent by the scanner (for troubleshooting)",
-
   "labels.title": "Print barcode labels",
   "labels.layout_t40": "40×30 mm",
   "labels.layout_t50": "50×30 mm",
@@ -107,12 +98,10 @@
   "labels.preview": "Preview ({{count}} labels)",
   "labels.print": "Print",
   "labels.printHint": "In the print dialog choose Scale 100% and Margins: None",
-
   "tagging.title": "Tagging day",
   "tagging.progress": "Labelled {{done}} / {{total}}",
   "tagging.printLabels": "Print this category",
   "tagging.noCategory": "No category",
-
   "import.title": "Import products from Excel",
   "import.step1": "Download the Excel template",
   "import.step2": "Fill in one row per product (see the help sheet)",
@@ -125,7 +114,6 @@
   "import.row": "Row",
   "import.run": "Import",
   "import.done": "{{count}} products imported",
-
   "backup.title": "Backup",
   "backup.hint": "Save a backup once a day and keep it on Google Drive or a laptop.",
   "backup.export": "Save backup",
@@ -137,5 +125,9 @@
   "backup.confirmBody": "The backup has {{products}} products and {{sales}} sales.",
   "backup.safetyCopy": "A copy of the current data is saved automatically before restoring.",
   "backup.restoreNow": "Restore",
-  "backup.restored": "Restored"
+  "backup.restored": "Restored",
+  "demo.hint": "Add demo products (with barcodes) to try the app. Remove them before entering real products.",
+  "demo.loadedHint": "Demo products are loaded. Print their barcodes from the labels screen to test. Remove them before real use.",
+  "demo.load": "Load demo products",
+  "demo.remove": "Remove demo products"
 }

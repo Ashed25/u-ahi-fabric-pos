@@ -1,7 +1,6 @@
 {
   "app.loading": "ခဏစောင့်ပါ…",
   "lang.toggle": "English",
-
   "common.back": "နောက်သို့",
   "common.add": "ထည့်ရန်",
   "common.all": "အားလုံး",
@@ -13,18 +12,14 @@
   "common.remove": "ဖျက်ရန်",
   "common.save": "သိမ်းရန်",
   "common.saved": "သိမ်းပြီးပါပြီ",
-
   "home.largeText": "စာလုံးကြီး",
   "home.normalText": "စာလုံးပုံမှန်",
-
   "unit.inches": "လက်မ",
-
   "products.title": "ပစ္စည်းများ",
   "products.add": "ပစ္စည်းအသစ်",
   "products.search": "အမည်ဖြင့် ရှာရန်",
   "products.count": "ပစ္စည်း {{count}} မျိုး",
   "products.hidden": "ဖျောက်ထားသည်",
-
   "product.new": "ပစ္စည်းအသစ်",
   "product.kindPiece": "ထည်လိုက်",
   "product.kindLength": "အလျား",
@@ -56,7 +51,6 @@
   "product.errPrice": "ဈေးနှုန်းကို ဂဏန်းဖြင့် ထည့်ပါ",
   "product.errCost": "အရင်းကို ဂဏန်းဖြင့် ထည့်ပါ",
   "product.errLow": "သတိပေးရန် အရေအတွက်ကို ဂဏန်းဖြင့် ထည့်ပါ",
-
   "barcode.title": "ဘားကုဒ်",
   "barcode.generated": "ဆိုင်ထုတ်",
   "barcode.assignedShort": "စကန်ဖတ်ထည့်",
@@ -68,7 +62,6 @@
   "barcode.assigned": "{{code}} ချိတ်ပြီးပါပြီ",
   "barcode.taken": "{{code}} ကို “{{name}}” မှာ သုံးပြီးသားပါ",
   "barcode.confirmRemove": "ဘားကုဒ် {{code}} ကို ဖျက်မှာ သေချာလား?",
-
   "units.title": "အလျား ယူနစ်များ",
   "units.hint": "ပြောင်းလိုက်ရင် နောက်ရောင်းမည့်ဟာတွေမှာသာ သက်ရောက်မည်။ ရောင်းပြီးသားများ မပြောင်းပါ။",
   "units.nameMy": "မြန်မာ",
@@ -76,7 +69,6 @@
   "units.inches": "လက်မ",
   "units.pricing": "ဈေးသတ်မှတ်လို့ရ",
   "units.invalid": "အမည်နှင့် လက်မ (ဥပမာ 4.4) မှန်မှန် ထည့်ပါ",
-
   "scanner.title": "စကန်နာ စမ်းရန်",
   "scanner.hint": "ဘားကုဒ် တစ်ခုခု စကန်ဖတ်ကြည့်ပါ။ ဂဏန်းမှန်မှန် ပေါ်ရင် အဆင်ပြေပါပြီ။",
   "scanner.waiting": "စကန်ဖတ်ရန် စောင့်နေသည်…",
@@ -86,7 +78,6 @@
   "scanner.digits": "လုံး",
   "scanner.digit": "ဂဏန်း",
   "scanner.rawKeys": "စကန်နာ ပို့သော ခလုတ်များ (စစ်ဆေးရန်)",
-
   "labels.title": "ဘားကုဒ် စာကပ် ထုတ်ရန်",
   "labels.layout_t40": "40×30 မမ",
   "labels.layout_t50": "50×30 မမ",
@@ -107,12 +98,10 @@
   "labels.preview": "ကြိုကြည့်ရန် ({{count}} ခု)",
   "labels.print": "ပရင့်ထုတ်ရန်",
   "labels.printHint": "ပရင့်ထုတ်ရာတွင် Scale 100% နှင့် Margins: None ကို ရွေးပါ",
-
   "tagging.title": "စာကပ် ကပ်သည့်နေ့",
   "tagging.progress": "ကပ်ပြီး {{done}} / {{total}}",
   "tagging.printLabels": "ဒီအမျိုးအစား ထုတ်ရန်",
   "tagging.noCategory": "အမျိုးအစား မရှိ",
-
   "import.title": "Excel မှ ပစ္စည်း ထည့်ရန်",
   "import.step1": "Excel ပုံစံကို ဒေါင်းလုဒ် လုပ်ပါ",
   "import.step2": "ပစ္စည်းတစ်ခုစီ တစ်ကြောင်းစီ ဖြည့်ပါ (help စာမျက်နှာ ကြည့်ပါ)",
@@ -125,7 +114,6 @@
   "import.row": "အတန်း",
   "import.run": "ထည့်ရန်",
   "import.done": "ပစ္စည်း {{count}} မျိုး ထည့်ပြီးပါပြီ",
-
   "backup.title": "အရန်သိမ်းရန်",
   "backup.hint": "နေ့တိုင်း တစ်ခါ အရန်ဖိုင် သိမ်းပြီး Google Drive သို့မဟုတ် လက်ပ်တော့ထဲ ထားပါ။",
   "backup.export": "အရန်ဖိုင် သိမ်းရန်",
@@ -137,5 +125,9 @@
   "backup.confirmBody": "အရန်ဖိုင်ထဲမှာ ပစ္စည်း {{products}} မျိုး၊ အရောင်း {{sales}} ခု ပါသည်။",
   "backup.safetyCopy": "မပြန်ယူမီ လက်ရှိ အချက်အလက်ကို အရန်ဖိုင်အဖြစ် အလိုအလျောက် သိမ်းပေးမည်။",
   "backup.restoreNow": "ပြန်ယူမည်",
-  "backup.restored": "ပြန်ယူပြီးပါပြီ"
+  "backup.restored": "ပြန်ယူပြီးပါပြီ",
+  "demo.hint": "စမ်းသပ်ရန် နမူနာ ပစ္စည်းများ (ဘားကုဒ်နှင့်တကွ) ထည့်နိုင်သည်။ အစစ်မထည့်မီ ပြန်ဖျက်ပါ။",
+  "demo.loadedHint": "နမူနာ ပစ္စည်းများ ရှိနေသည်။ ဘားကုဒ် စာကပ်ထုတ်ရန် စာမျက်နှာမှ ပရင့်ထုတ်၍ စမ်းနိုင်သည်။ အစစ် မစမီ ဖျက်ပါ။",
+  "demo.load": "နမူနာ ပစ္စည်း ထည့်ရန်",
+  "demo.remove": "နမူနာ ပစ္စည်း ဖျက်ရန်"
 }
