@@ -24,6 +24,9 @@ export interface LengthLine {
   pricingUnit: string
   unitTenths: number
   lineTotalKs: number // already rounded per line
+  rollId?: number // roll the seller cut from (default: the open roll)
+  remnantPct?: number // remnant sold at % off
+  wholeRemnant?: boolean // remnant sold whole at its fixed price
 }
 
 export type CartLine = PieceLine | LengthLine

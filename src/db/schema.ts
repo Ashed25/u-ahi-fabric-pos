@@ -124,6 +124,8 @@ export interface SaleLine {
   unitTenths?: number
   ctRateBp: number
   lineTotalKs: number
+  remnantPct?: number
+  wholeRemnant?: boolean
 }
 
 export interface Payment {

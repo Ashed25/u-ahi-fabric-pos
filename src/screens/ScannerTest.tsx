@@ -3,7 +3,8 @@ import { useTranslation } from 'react-i18next'
 import { isValidEan13, looksLikeMisread } from '../core/barcode'
 import { digitOf } from '../core/scanner'
 import { findByBarcode } from '../db/products'
-import { Screen } from '../ui/kit'
+import { CameraScan, cameraScanSupported } from '../ui/CameraScan'
+import { Btn, Screen, inputCls } from '../ui/kit'
 import { beepError, beepOk } from '../ui/sound'
 import { useScanner } from '../ui/useScanner'
 
@@ -18,6 +19,7 @@ export function ScannerTest() {
   const { t } = useTranslation()
   const [raw, setRaw] = useState<Raw[]>([])
   const [result, setResult] = useState<{ code: string; text: string; ok: boolean }>()
+  const [typed, setTyped] = useState('')
 
   useEffect(() => {
     let last = 0
@@ -30,7 +32,11 @@ export function ScannerTest() {
     return () => document.removeEventListener('keydown', onKey)
   }, [])
 
-  useScanner(async (code) => {
+  const [camera, setCamera] = useState(false)
+  useScanner(check)
+
+  async function check(code: string) {
+    setCamera(false)
     const found = await findByBarcode(code)
     const ok = !!found
     ;(ok ? beepOk : beepError)()
@@ -40,7 +46,7 @@ export function ScannerTest() {
         ? t('scanner.misread')
         : t('scanner.notFound')
     setResult({ code, text, ok })
-  })
+  }
 
   return (
     <Screen title={t('scanner.title')}>
@@ -60,6 +66,27 @@ export function ScannerTest() {
             <div className="text-2xl">{t('scanner.waiting')}</div>
           )}
         </div>
+        {/* No scanner at hand: read with the camera, or type the digits. */}
+        <div className="mb-4 flex flex-wrap gap-2">
+          {cameraScanSupported() && (
+            <Btn variant="plain" onClick={() => setCamera(true)}>
+              📷 {t('camera.button')}
+            </Btn>
+          )}
+          <form
+            className="flex flex-1 gap-2"
+            onSubmit={(e) => {
+              e.preventDefault()
+              const v = typed.trim()
+              if (/^\d{4,}$/.test(v)) check(v)
+              setTyped('')
+            }}
+          >
+            <input className={inputCls} inputMode="numeric" placeholder={t('barcode.typeIt')} value={typed} onChange={(e) => setTyped(e.target.value)} />
+            <Btn type="submit">{t('grid.useCode')}</Btn>
+          </form>
+        </div>
+        {camera && <CameraScan onCode={check} onClose={() => setCamera(false)} />}
         <h2 className="mb-2 font-bold">{t('scanner.rawKeys')}</h2>
         <table className="w-full font-mono text-base">
           <thead>

@@ -21,3 +21,9 @@ export function fabricLinePrice(
   if (unitTenths === 0 || step === 0) throw new Error('fabricLinePrice: zero unit/step')
   return roundFraction(unitPriceKs * lengthTenths, unitTenths, step, mode)
 }
+
+/** Remnant at pctOff % off: exact integer maths, rounded once per line like any fabric line. */
+export function discountedLinePrice(unitPriceKs: number, lengthTenths: number, unitTenths: number, pctOff: number, step = 50, mode: RoundMode = 'nearest'): number {
+  if (!Number.isInteger(pctOff) || pctOff < 0 || pctOff >= 100) throw new Error(`bad discount ${pctOff}`)
+  return fabricLinePrice(unitPriceKs * (100 - pctOff), lengthTenths, unitTenths * 100, step, mode)
+}

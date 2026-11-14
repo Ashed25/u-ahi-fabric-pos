@@ -23,7 +23,8 @@ export function receiptRows(t: TFunction, lang: string, s: Settings, d: { sale: 
   for (const l of d.lines) {
     if (l.kind === 'length') {
       rows.push({ left: l.nameMy, right: ks(l.lineTotalKs), bold: true })
-      rows.push({ left: `  ${formatEntered(l.entered ?? [], s.units, lang as 'my' | 'en')} (${formatInches(l.lengthTenths ?? 0)}") @ ${ks(l.unitPriceKs)}/${unitName(s.units, l.pricingUnit ?? 'gaik', lang)}`, small: true })
+      const remnant = l.wholeRemnant ? ` ✂ ${t('stock.remnant')}` : l.remnantPct ? ` ✂ −${l.remnantPct}%` : ''
+      rows.push({ left: `  ${formatEntered(l.entered ?? [], s.units, lang as 'my' | 'en')} (${formatInches(l.lengthTenths ?? 0)}") @ ${ks(l.unitPriceKs)}/${unitName(s.units, l.pricingUnit ?? 'gaik', lang)}${remnant}`, small: true })
     } else {
       rows.push({ left: l.nameMy, right: ks(l.lineTotalKs), bold: true })
       const detail = [l.sub, (l.qty ?? 1) > 1 ? `${l.qty} × ${ks(l.unitPriceKs)}` : ''].filter(Boolean).join(' · ')

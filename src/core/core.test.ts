@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { DEFAULT_UNITS as U, unitByCode } from './units'
 import { addUnit, type EnteredLength, formatEntered, formatInches, formatLargestFirst, toTenths } from './length'
-import { fabricLinePrice } from './pricing'
+import { discountedLinePrice, fabricLinePrice } from './pricing'
 import { amountDue, changeDue, formatKs } from './money'
 import { applyCt, ctFromExclusive, ctFromInclusive } from './tax'
 import { internalEan13, isValidEan13, looksLikeMisread } from './barcode'
@@ -46,6 +46,14 @@ describe('fabric pricing (owner-supplied cases)', () => {
     expect(formatInches(toTenths(L(['taung', 3]), U))).toBe('54')
     expect(formatInches(toTenths(L(['taung', 1], ['maik', 2]), U))).toBe('26.8')
     expect(formatInches(toTenths(L(['maik', 2]), U))).toBe('8.8')
+  })
+
+  it('remnant % off is exact, then rounded per line', () => {
+    expect(discountedLinePrice(8000, 360, 360, 30)).toBe(5600)
+    expect(discountedLinePrice(5500, 90, 360, 20)).toBe(1100)
+    expect(discountedLinePrice(8000, 44, 360, 30)).toBe(700) // 684.4
+    expect(discountedLinePrice(8000, 764, 360, 0)).toBe(17000) // same as no discount
+    expect(() => discountedLinePrice(8000, 360, 360, 100)).toThrow()
   })
 
   it('rounding step and mode are settings', () => {

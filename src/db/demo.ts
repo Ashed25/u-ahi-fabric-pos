@@ -1,10 +1,13 @@
 import { DEFAULT_QUICK_CUTS, assignBarcode, saveProduct } from './products'
 import { type Product, db } from './schema'
+import { markRemnant, receivePieces, receiveRoll } from './stock'
+
+const YD = 360
 
 /** Demo catalogue for trying the app. Everything is flagged demo:true so it can be removed in one tap. */
 const CATS = ['အင်္ကျီ', 'ထဘီ / ပုဆိုး', 'ပိတ်စ', 'အထွေထွေ']
 
-type Demo = { cat: number; color: string; p: Partial<Product>; variants?: { size?: string; colour?: string; priceKs?: number }[]; supplierCode?: string }
+type Demo = { cat: number; color: string; p: Partial<Product>; variants?: { size?: string; colour?: string; priceKs?: number }[]; supplierCode?: string; rolls?: { tenths: number; remnantPct?: number }[] }
 
 const ITEMS: Demo[] = [
   { cat: 0, color: '#f8fafc', p: { kind: 'piece', nameMy: 'ရှပ်အင်္ကျီ အဖြူ', nameEn: 'White shirt', priceKs: 15000, costKs: 9000 }, variants: [{ size: 'M' }, { size: 'L' }, { size: 'XL', priceKs: 16500 }] },
@@ -12,10 +15,10 @@ const ITEMS: Demo[] = [
   { cat: 1, color: '#7c2d12', p: { kind: 'piece', nameMy: 'ပုဆိုး ကွက်', nameEn: 'Checked paso', priceKs: 12000, costKs: 7500 }, variants: [{}] },
   { cat: 1, color: '#be123c', p: { kind: 'piece', nameMy: 'ထဘီ ပန်းရိုက်', nameEn: 'Printed htamein', priceKs: 18500, costKs: 11000 }, variants: [{ colour: 'အနီ' }, { colour: 'အပြာ' }] },
   { cat: 3, color: '#0d9488', p: { kind: 'piece', nameMy: 'မျက်နှာသုတ်ပုဝါ', nameEn: 'Towel', priceKs: 3500, costKs: 2000 }, variants: [{}], supplierCode: '8851234567890' },
-  { cat: 2, color: '#2563eb', p: { kind: 'length', nameMy: 'ပိုးထည် အပြာ', nameEn: 'Blue silk', pricingUnit: 'gaik', unitPriceKs: 8000, widthTenths: 450, costKs: 5000 } },
-  { cat: 2, color: '#e2e8f0', p: { kind: 'length', nameMy: 'ချည်ထည် အဖြူ', nameEn: 'White cotton', pricingUnit: 'gaik', unitPriceKs: 5500, widthTenths: 360, costKs: 3000 } },
-  { cat: 2, color: '#a855f7', p: { kind: 'length', nameMy: 'ဇာ ခရမ်း', nameEn: 'Purple lace', pricingUnit: 'taung', unitPriceKs: 4000, widthTenths: 584, costKs: 2500 } },
-  { cat: 2, color: '#16a34a', p: { kind: 'length', nameMy: 'ချည်ထည် ပန်းရိုက်', nameEn: 'Printed cotton', pricingUnit: 'gaik', unitPriceKs: 3000, widthTenths: 450 } },
+  { cat: 2, color: '#2563eb', p: { kind: 'length', nameMy: 'ပိုးထည် အပြာ', nameEn: 'Blue silk', pricingUnit: 'gaik', unitPriceKs: 8000, widthTenths: 450, costKs: 5000, lowStock: 10 * YD }, rolls: [{ tenths: 50 * YD }, { tenths: 12 * YD + 180 }] },
+  { cat: 2, color: '#e2e8f0', p: { kind: 'length', nameMy: 'ချည်ထည် အဖြူ', nameEn: 'White cotton', pricingUnit: 'gaik', unitPriceKs: 5500, widthTenths: 360, costKs: 3000 }, rolls: [{ tenths: 30 * YD }] },
+  { cat: 2, color: '#a855f7', p: { kind: 'length', nameMy: 'ဇာ ခရမ်း', nameEn: 'Purple lace', pricingUnit: 'taung', unitPriceKs: 4000, widthTenths: 584, costKs: 2500 }, rolls: [{ tenths: 20 * YD }, { tenths: 2 * 180 - 90, remnantPct: 30 }] },
+  { cat: 2, color: '#16a34a', p: { kind: 'length', nameMy: 'ချည်ထည် ပန်းရိုက်', nameEn: 'Printed cotton', pricingUnit: 'gaik', unitPriceKs: 3000, widthTenths: 450, lowStock: 5 * YD }, rolls: [{ tenths: 2 * 90 }] },
 ]
 
 /** A plain coloured square with the name, standing in for a product photo. */
@@ -62,13 +65,21 @@ export async function loadDemo() {
       const [v] = await db.variants.where('productId').equals(id).toArray()
       await assignBarcode(it.supplierCode, id, v?.id)
     }
+    // Opening stock: 10 of each size/colour, and the listed fabric rolls (one short roll to try remnants).
+    for (const v of await db.variants.where('productId').equals(id).toArray()) await receivePieces(v.id!, 10, 0, 'demo')
+    for (const r of it.rolls ?? []) {
+      const rollId = await receiveRoll(id, r.tenths, 0, 'demo')
+      if (r.remnantPct) await markRemnant(rollId, { pct: r.remnantPct })
+    }
   }
 }
 
 /** Removes demo products, their variants and barcodes, and demo categories left empty. */
 export function removeDemo() {
-  return db.transaction('rw', [db.products, db.variants, db.barcodes, db.categories], async () => {
+  return db.transaction('rw', [db.products, db.variants, db.barcodes, db.categories, db.rolls, db.stockMoves], async () => {
     const ids = (await db.products.filter((p) => !!p.demo).toArray()).map((p) => p.id!)
+    await db.rolls.where('productId').anyOf(ids).delete()
+    await db.stockMoves.where('productId').anyOf(ids).delete()
     await db.barcodes.where('productId').anyOf(ids).delete()
     await db.variants.where('productId').anyOf(ids).delete()
     await db.products.bulkDelete(ids)

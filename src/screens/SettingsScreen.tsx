@@ -7,8 +7,8 @@ import { type Settings, setSetting } from '../db/settings'
 import { useSettings } from '../db/useSettings'
 import { Btn, Field, Screen, inputCls } from '../ui/kit'
 
-type Draft = Pick<Settings, 'shopName' | 'shopAddress' | 'shopPhone' | 'tin' | 'roundStep' | 'roundMode' | 'receiptEnabled' | 'receiptFooter' | 'returnPolicy' | 'practiceMode' | 'devicePrefix' | 'paymentMethods' | 'ct'>
-const KEYS: (keyof Draft)[] = ['shopName', 'shopAddress', 'shopPhone', 'tin', 'roundStep', 'roundMode', 'receiptEnabled', 'receiptFooter', 'returnPolicy', 'practiceMode', 'devicePrefix', 'paymentMethods', 'ct']
+type Draft = Pick<Settings, 'shopName' | 'shopAddress' | 'shopPhone' | 'tin' | 'roundStep' | 'roundMode' | 'receiptEnabled' | 'receiptFooter' | 'returnPolicy' | 'practiceMode' | 'devicePrefix' | 'paymentMethods' | 'ct' | 'remnantBelowTenths'>
+const KEYS: (keyof Draft)[] = ['shopName', 'shopAddress', 'shopPhone', 'tin', 'roundStep', 'roundMode', 'receiptEnabled', 'receiptFooter', 'returnPolicy', 'practiceMode', 'devicePrefix', 'paymentMethods', 'ct', 'remnantBelowTenths']
 
 export function SettingsScreen() {
   const { t } = useTranslation()
@@ -87,6 +87,18 @@ export function SettingsScreen() {
             </Btn>
           ))}
         </div>
+
+        <Field label={t('settings.remnantBelow')} hint={t('settings.remnantBelowHint')}>
+          <input
+            className={`${inputCls} w-32`}
+            inputMode="decimal"
+            defaultValue={d.remnantBelowTenths / 360}
+            onChange={(e) => {
+              const yards = Number(e.target.value)
+              if (yards > 0) set({ remnantBelowTenths: Math.round(yards * 360) })
+            }}
+          />
+        </Field>
 
         <h2 className="text-2xl font-bold">{t('settings.payments')}</h2>
         <div className="grid grid-cols-2 gap-2">

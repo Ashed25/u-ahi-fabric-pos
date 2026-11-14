@@ -9,6 +9,8 @@ import { priceText, subText } from '../ui/format'
 import { Btn, Field, Screen, inputCls, toInt } from '../ui/kit'
 import { Photo } from '../ui/photo'
 import { useRoute } from '../ui/router'
+import { dateKey } from '../core/fy'
+import { formatLargestFirst } from '../core/length'
 
 type Layout = 't40' | 't50' | 'a4' | 'book'
 const THERMAL = { t40: [40, 30], t50: [50, 30] } as const
@@ -37,13 +39,14 @@ export function Labels() {
   const [printing, setPrinting] = useState(false)
 
   const data = useLiveQuery(async () => {
-    const [categories, products, variants, barcodes] = await Promise.all([
+    const [categories, products, variants, barcodes, rolls] = await Promise.all([
       db.categories.orderBy('sort').toArray(),
       db.products.filter((p) => p.active).toArray(),
       db.variants.toArray(),
       db.barcodes.toArray(),
+      db.rolls.toArray(),
     ])
-    return { categories, products: products.sort((a, b) => a.nameMy.localeCompare(b.nameMy)), variants, barcodes }
+    return { categories, products: products.sort((a, b) => a.nameMy.localeCompare(b.nameMy)), variants, barcodes, rolls }
   }, [])
 
   // Default: one label for every product in the chosen category.
@@ -70,7 +73,36 @@ export function Labels() {
     return out
   }, [data, settings, copies, layout, t, i18n.language])
 
+  // Opened from a roll on the stock screen: print just that roll's label.
+  const rollId = query.roll ? Number(query.roll) : undefined
+  const roll = rollId ? data?.rolls.find((r) => r.id === rollId) : undefined
+  const rollProduct = roll && data?.products.find((p) => p.id === roll.productId)
+  const rollCode = rollProduct && pick(data!.barcodes.filter((b) => b.productId === rollProduct.id && b.variantId == null))
+
   if (!data || !settings) return null
+
+  if (roll && rollProduct && rollCode) {
+    const item: Item = {
+      key: `roll-${roll.id}`,
+      code: rollCode.code,
+      name: rollProduct.nameMy,
+      sub: `${t('stock.roll')} #${roll.id} · ${formatLargestFirst(roll.startTenths, settings.units, i18n.language === 'en' ? 'en' : 'my')} · ${dateKey(roll.receivedAt)}`,
+      price: priceText(t, rollProduct, settings.units, i18n.language),
+    }
+    return (
+      <div>
+        <div className="no-print sticky top-0 z-10 flex gap-3 bg-blue-900 p-2">
+          <Btn variant="plain" onClick={() => history.back()}>
+            ← {t('common.back')}
+          </Btn>
+          <Btn variant="ok" onClick={() => window.print()}>
+            🖨 {t('labels.print')}
+          </Btn>
+        </div>
+        <PrintSheets layout="t50" items={[item]} settings={settings} skip={0} categories={data.categories} />
+      </div>
+    )
+  }
 
   if (printing)
     return (

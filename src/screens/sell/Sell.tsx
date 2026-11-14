@@ -187,6 +187,7 @@ function SellScreen({ settings }: { settings: Settings }) {
                     ) : (
                       <span className="block text-xl text-slate-700">
                         <b>{formatEntered(l.entered, settings.units, lang)}</b> <span className="text-base">({formatInches(l.lengthTenths)}")</span>
+                        {(l.remnantPct || l.wholeRemnant) && <span className="ml-2 text-amber-700">✂ {l.remnantPct ? `−${l.remnantPct}%` : t('stock.remnant')}</span>}
                       </span>
                     )}
                   </span>
@@ -225,6 +226,7 @@ function SellScreen({ settings }: { settings: Settings }) {
           title={grid.kind === 'sell' ? t('sell.byPhoto') : t('sell.pickToLink', { code: grid.code })}
           onClose={() => setGrid(undefined)}
           onPick={(p) => (grid.kind === 'assign' ? linkUnknown(p) : (setGrid(undefined), addProduct(p)))}
+          onCode={grid.kind === 'sell' ? (code) => (setGrid(undefined), onScan(code)) : undefined}
         />
       )}
 
@@ -241,9 +243,10 @@ function SellScreen({ settings }: { settings: Settings }) {
           product={cutFor.product}
           settings={settings}
           initial={cutFor.edit?.entered}
+          initialRollId={cutFor.edit?.rollId}
           onCancel={() => setCutFor(undefined)}
-          onOk={(entered) => {
-            const line = lengthLine(t, cutFor.product, entered, settings, cutFor.edit?.key)
+          onOk={(entered, roll, whole) => {
+            const line = lengthLine(t, cutFor.product, entered, settings, cutFor.edit?.key, roll, whole)
             setLines((ls) => (cutFor.edit ? ls.map((l) => (l.key === line.key ? line : l)) : [...ls, line]))
             say({ ok: true, text: `${cutFor.product.nameMy} ${formatEntered(entered, settings.units, lang)}` })
             setCutFor(undefined)

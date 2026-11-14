@@ -49,6 +49,17 @@ describe('completeSale', () => {
     expect(ok.sale.id).toBe('A-000001')
   })
 
+  it('cuts from the chosen roll and finishes a roll cut to zero', async () => {
+    const { rid, lines } = await setup()
+    const fid = lines[1].productId
+    const small = (await db.rolls.add({ productId: fid, startTenths: 540, remainingTenths: 540, status: 'remnant', remnantPriceKs: 9000, receivedAt: 2 })) as number
+    const fabric = { ...lines[1], rollId: small, wholeRemnant: true, lineTotalKs: 9000 } as CartLine
+    await completeSale([fabric], [{ method: 'cash', amountKs: 9000 }])
+    expect(await db.rolls.get(small)).toMatchObject({ remainingTenths: 0, status: 'finished' })
+    expect((await db.rolls.get(rid))!.remainingTenths).toBe(18000)
+    expect((await db.saleLines.toArray())[0]).toMatchObject({ rollId: small, wholeRemnant: true, lineTotalKs: 9000 })
+  })
+
   it('practice mode records nothing', async () => {
     const { vid, lines } = await setup()
     await setSetting('practiceMode', true)

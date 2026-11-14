@@ -109,6 +109,7 @@ export function SaleView({ id }: { id: string }) {
                     <>
                       {formatEntered(l.entered ?? [], settings.units, lang)} <span className="text-base">({formatInches(l.lengthTenths ?? 0)}")</span> @ {formatKs(l.unitPriceKs)}/
                       {unitName(settings.units, l.pricingUnit ?? 'gaik', lang)}
+                      {(l.remnantPct || l.wholeRemnant) && <span className="ml-2 text-amber-700">✂ {l.remnantPct ? `−${l.remnantPct}%` : t('stock.remnant')}</span>}
                     </>
                   ) : (
                     `${l.sub ? `${l.sub} · ` : ''}${l.qty} × ${formatKs(l.unitPriceKs)}`

@@ -4,7 +4,17 @@ Offline-first point of sale for a Myanmar clothing & fabric shop: Android tablet
 
 **Live test version:** https://ashed25.github.io/u-ahi-fabric-pos/
 
-> Status: phases 0, a and b are done (products, barcodes, labels, import, backup, **selling**, payments, sales history). Next: roll stock, returns, reports, users/PINs, cloud sync. There are no PINs yet, so don't use it in the shop yet.
+> Status: phases 0, a, b and c are done (products, barcodes, labels, import, backup, selling, payments, sales history, **fabric rolls, remnants, stock**). Next: returns, reports, users/PINs, cloud sync. There are no PINs yet, so don't use it in the shop yet.
+
+## No scanner yet? Three ways to "scan"
+
+| Where | How |
+|---|---|
+| **Sell screen → ဓာတ်ပုံဖြင့် ရွေးရန်** | Type a barcode number (e.g. `2000000000015`) and tap **ရှာရန်**, or type part of a name, or just tap the photo. |
+| **Tablet camera** (Android Chrome) | In *ဓာတ်ပုံဖြင့် ရွေးရန်* or *စကန်နာ စမ်းရန်*, tap **📷 ကင်မရာဖြင့် ဖတ်ရန်** and point the back camera at a printed barcode (or at the barcode book on the laptop screen). Allow camera access when asked. |
+| **Scanner test screen** | Type the digits in the box to check what a barcode is. |
+
+Demo barcodes to type: shirt M `2000000000015`, shirt XL `2000000000039`, blue silk `2000000000114`, white cotton `2000000000121`, purple lace `2000000000138`, printed cotton `2000000000145`, towel `8851234567890`. The full list with pictures is in the barcode book (Menu → labels → ဘားကုဒ် စာအုပ်).
 
 ## Try it (no install needed)
 
@@ -21,8 +31,14 @@ Offline-first point of sale for a Myanmar clothing & fabric shop: Android tablet
 5. **Sales history:** Menu → **အရောင်း မှတ်တမ်း**: every sale with its number, time, items (fabric shown exactly as entered) and payments.
 6. **Practice mode:** Menu → **ဆက်တင်များ** → *လေ့ကျင့်ရန် မုဒ်*. An orange banner shows, and nothing is recorded. Good for teaching.
 7. **Digital receipt (off by default):** Settings → turn on *ပြေစာ ပြ/ပို့*. Then *Show receipt* appears after a sale, and you can share it as a picture via Viber/Messenger.
-8. **Scanner test (စကန်နာ စမ်းရန်):** shows exactly what the scanner sends, if a scan doesn't work.
-9. When you are done testing, Menu → **နမူနာ ပစ္စည်း ဖျက်ရန်** (Remove demo products). Test sales stay in the history. To start completely clean, clear the site data in Chrome (Settings → Site settings → this site → Clear data).
+8. **Fabric rolls and stock:** Menu → **📦 လက်ကျန်**. The demo has 10 of each clothing size and some fabric rolls.
+   - **Blue silk** has 2 rolls. When you sell it, the shorter (open) roll is picked automatically; you can tap the other roll. The roll gets shorter with each sale.
+   - **Purple lace** has a remnant roll (✂ 30% off). Tap it in the length screen and the price drops.
+   - **Printed cotton** has only 18" left, so the stock screen suggests selling it as a remnant. Tap ✂ အစ → *one price for all* → e.g. 1,500. On the sell screen, *အစ အကုန်ယူ* sells the whole piece.
+   - **+ လိပ်အသစ် ဝင်ရန်** receives a new roll; **+ ဝင်** receives clothes; **ပြင်ရန်** corrects stock (a reason is required); **🏷 လိပ် စာကပ်** prints a roll label.
+   - **📋 လက်ကျန် စစ်ရန်** (stock count / opening stock): start a count, scan or tap each item, and enter what is really there.
+9. **Scanner test (စကန်နာ စမ်းရန်):** shows exactly what the scanner sends, if a scan doesn't work.
+10. When you are done testing, Menu → **နမူနာ ပစ္စည်း ဖျက်ရန်** (Remove demo products). Test sales stay in the history. To start completely clean, clear the site data in Chrome (Settings → Site settings → this site → Clear data).
 
 **Install on the tablet:** in Chrome, menu ⋮ → *Add to Home screen / Install app*. It then works offline.
 

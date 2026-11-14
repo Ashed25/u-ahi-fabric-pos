@@ -9,6 +9,7 @@ import { go } from '../ui/router'
 
 const TILES = [
   ['sales', '🧾', 'history.title'],
+  ['stock', '📦', 'stock.title'],
   ['products', '👕', 'products.title'],
   ['labels', '🏷', 'labels.title'],
   ['tagging', '✅', 'tagging.title'],

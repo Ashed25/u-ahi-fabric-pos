@@ -3,9 +3,9 @@ import type { TFunction } from 'i18next'
 import type { CartLine, LengthLine, PieceLine } from '../../core/cart'
 import { newKey } from '../../core/cart'
 import { type EnteredLength, toTenths } from '../../core/length'
-import { fabricLinePrice } from '../../core/pricing'
+import { discountedLinePrice } from '../../core/pricing'
 import { unitByCode } from '../../core/units'
-import type { Product, Variant } from '../../db/schema'
+import type { Product, Roll, Variant } from '../../db/schema'
 import type { Settings } from '../../db/settings'
 import { subText } from '../../ui/format'
 
@@ -13,17 +13,22 @@ export function pieceItem(t: TFunction, p: Product, v: Variant): Omit<PieceLine,
   return { productId: p.id!, variantId: v.id!, nameMy: p.nameMy, sub: subText(t, p, v), unitPriceKs: v.priceKs ?? p.priceKs ?? 0 }
 }
 
-export function lengthPrice(p: Product, entered: EnteredLength, s: Settings) {
+/** Price of a cut. A remnant roll is sold at its % off, or — when sold whole — at its fixed price. */
+export function lengthPrice(p: Product, entered: EnteredLength, s: Settings, roll?: Roll, whole = false) {
   const unitTenths = unitByCode(s.units, p.pricingUnit ?? 'gaik').tenths
   const lengthTenths = toTenths(entered, s.units)
-  return { lengthTenths, unitTenths, totalKs: fabricLinePrice(p.unitPriceKs ?? 0, lengthTenths, unitTenths, s.roundStep, s.roundMode) }
+  const pct = roll?.status === 'remnant' ? (roll.remnantPct ?? 0) : 0
+  const totalKs =
+    whole && roll?.remnantPriceKs ? roll.remnantPriceKs : discountedLinePrice(p.unitPriceKs ?? 0, lengthTenths, unitTenths, pct, s.roundStep, s.roundMode)
+  return { lengthTenths, unitTenths, totalKs, pct }
 }
 
-export function lengthLine(t: TFunction, p: Product, entered: EnteredLength, s: Settings, key = newKey()): LengthLine {
-  const { lengthTenths, unitTenths, totalKs } = lengthPrice(p, entered, s)
+export function lengthLine(t: TFunction, p: Product, entered: EnteredLength, s: Settings, key = newKey(), roll?: Roll, whole = false): LengthLine {
+  const { lengthTenths, unitTenths, totalKs, pct } = lengthPrice(p, entered, s, roll, whole)
   return {
     key, kind: 'length', productId: p.id!, nameMy: p.nameMy, sub: subText(t, p), entered, lengthTenths,
     unitPriceKs: p.unitPriceKs ?? 0, pricingUnit: p.pricingUnit ?? 'gaik', unitTenths, lineTotalKs: totalKs,
+    rollId: roll?.id, remnantPct: !whole && pct ? pct : undefined, wholeRemnant: whole && !!roll?.remnantPriceKs ? true : undefined,
   }
 }
 

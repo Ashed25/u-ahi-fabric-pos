@@ -1,4 +1,5 @@
 import { type CartLine, cartTotals } from '../core/cart'
+import { defaultRoll, sellableRolls } from '../core/stock'
 import { type Payment, type Sale, type SaleLine, db } from './schema'
 import { getSetting, setSetting } from './settings'
 
@@ -41,16 +42,18 @@ export async function completeSale(lines: CartLine[], payments: PaymentInput[], 
       const row: SaleLine =
         l.kind === 'piece'
           ? { saleId: sale.id, productId: l.productId, variantId: l.variantId, kind: 'piece', qty: l.qty, nameMy: l.nameMy, sub: l.sub || undefined, unitPriceKs: l.unitPriceKs, ctRateBp, lineTotalKs: l.unitPriceKs * l.qty }
-          : { saleId: sale.id, productId: l.productId, kind: 'length', entered: l.entered, lengthTenths: l.lengthTenths, nameMy: l.nameMy, sub: l.sub || undefined, unitPriceKs: l.unitPriceKs, pricingUnit: l.pricingUnit, unitTenths: l.unitTenths, ctRateBp, lineTotalKs: l.lineTotalKs }
+          : { saleId: sale.id, productId: l.productId, kind: 'length', entered: l.entered, lengthTenths: l.lengthTenths, nameMy: l.nameMy, sub: l.sub || undefined, unitPriceKs: l.unitPriceKs, pricingUnit: l.pricingUnit, unitTenths: l.unitTenths, ctRateBp, lineTotalKs: l.lineTotalKs, remnantPct: l.remnantPct, wholeRemnant: l.wholeRemnant }
       if (l.kind === 'piece') {
         const v = await db.variants.get(l.variantId)
         if (v) await db.variants.update(v.id!, { qty: v.qty - l.qty })
         await db.stockMoves.add({ at: now, userId, reason: 'sale', refId: sale.id, productId: l.productId, variantId: l.variantId, deltaQty: -l.qty })
       } else {
-        // shortcut: cuts from the oldest active roll; phase c lets the seller pick the roll.
-        const roll = (await db.rolls.where('productId').equals(l.productId).filter((r) => r.status !== 'finished').sortBy('receivedAt'))[0]
+        // The roll the seller chose, else the open roll. A roll cut to 0 (or below) is finished.
+        const rolls = await db.rolls.where('productId').equals(l.productId).toArray()
+        const roll = sellableRolls(rolls).find((r) => r.id === l.rollId) ?? defaultRoll(rolls)
         if (roll) {
-          await db.rolls.update(roll.id!, { remainingTenths: roll.remainingTenths - l.lengthTenths })
+          const remainingTenths = roll.remainingTenths - l.lengthTenths
+          await db.rolls.update(roll.id!, { remainingTenths, ...(remainingTenths <= 0 ? { status: 'finished' as const } : {}) })
           row.rollId = roll.id
         }
         await db.stockMoves.add({ at: now, userId, reason: 'sale', refId: sale.id, productId: l.productId, rollId: roll?.id, deltaTenths: -l.lengthTenths })

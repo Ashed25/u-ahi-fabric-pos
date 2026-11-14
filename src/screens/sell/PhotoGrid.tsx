@@ -4,28 +4,67 @@ import { useTranslation } from 'react-i18next'
 import { type Product, type Variant, db } from '../../db/schema'
 import type { Settings } from '../../db/settings'
 import { priceText, subText } from '../../ui/format'
-import { Btn, Modal } from '../../ui/kit'
+import { CameraScan, cameraScanSupported } from '../../ui/CameraScan'
+import { Btn, Modal, inputCls } from '../../ui/kit'
 import { Photo } from '../../ui/photo'
 import { useScanner } from '../../ui/useScanner'
 
-/** For items whose label is missing: pick by picture, by category. */
-export function PhotoGrid({ settings, title, onPick, onClose }: { settings: Settings; title: string; onPick: (p: Product) => void; onClose: () => void }) {
+/**
+ * For items whose label is missing: pick by picture, by category, or type a name.
+ * With onCode, typed barcode digits and the camera reader work like a scan (no scanner needed).
+ */
+export function PhotoGrid({
+  settings,
+  title,
+  onPick,
+  onClose,
+  onCode,
+}: {
+  settings: Settings
+  title: string
+  onPick: (p: Product) => void
+  onClose: () => void
+  onCode?: (code: string) => void
+}) {
   const { t, i18n } = useTranslation()
   const [cat, setCat] = useState<number>()
+  const [q, setQ] = useState('')
+  const [camera, setCamera] = useState(false)
   const categories = useLiveQuery(() => db.categories.orderBy('sort').toArray(), [])
   const products = useLiveQuery(() => db.products.filter((p) => p.active).toArray(), [])
   useScanner(null)
   if (!categories || !products) return null
-  const shown = products.filter((p) => cat === undefined || p.categoryId === cat).sort((a, b) => a.nameMy.localeCompare(b.nameMy))
+  const needle = q.trim().toLowerCase()
+  const isCode = /^\d{4,}$/.test(needle)
+  const shown = products
+    .filter((p) => cat === undefined || p.categoryId === cat)
+    .filter((p) => !needle || isCode || p.nameMy.includes(needle) || p.nameEn.toLowerCase().includes(needle))
+    .sort((a, b) => a.nameMy.localeCompare(b.nameMy))
 
   return (
     <div className="fixed inset-0 z-30 flex flex-col bg-white">
       <header className="flex items-center gap-3 bg-blue-900 px-4 py-2 text-white">
         <h2 className="flex-1 text-2xl font-bold">{title}</h2>
+        {onCode && cameraScanSupported() && (
+          <Btn variant="plain" onClick={() => setCamera(true)}>
+            📷 {t('camera.button')}
+          </Btn>
+        )}
         <Btn variant="plain" onClick={onClose}>
           ✕ {t('common.close')}
         </Btn>
       </header>
+      <form
+        className="flex gap-2 px-3 pt-3"
+        onSubmit={(e) => {
+          e.preventDefault()
+          if (onCode && isCode) onCode(needle)
+        }}
+      >
+        <input className={inputCls} placeholder={t(onCode ? 'grid.searchOrCode' : 'grid.search')} value={q} onChange={(e) => setQ(e.target.value)} />
+        {onCode && isCode && <Btn type="submit">{t('grid.useCode')}</Btn>}
+      </form>
+      {camera && onCode && <CameraScan onClose={() => setCamera(false)} onCode={onCode} />}
       <div className="flex flex-wrap gap-2 p-3">
         <Btn variant={cat === undefined ? 'primary' : 'plain'} onClick={() => setCat(undefined)}>
           {t('common.all')}
