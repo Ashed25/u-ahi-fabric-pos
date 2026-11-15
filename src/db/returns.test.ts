@@ -92,6 +92,10 @@ describe('returns', () => {
     await createReturn({ saleId: sale.id, items: [{ saleLineId: shirtLine, qty: 1 }], type: 'refund', reason: 'r', refundMethod: 'cash' })
     const s = summarize(await db.sales.toArray(), await db.saleLines.toArray(), await db.payments.toArray(), await db.creditNotes.toArray())
     expect(s).toMatchObject({ count: 2, totalKs: 57000, byMethod: { cash: 42000, kbzpay: 15000 }, refundsKs: 15000, paidOutByMethod: { cash: 15000 }, netKs: 42000, cashNetKs: 27000, pieces: 3 })
-    expect(s.fabric).toEqual([{ productId: 2, nameMy: 'ပိုး', tenths: 540 }])
+    // Every product listed on its own: shirts from both sales together, then the fabric
+    expect(s.items).toEqual([
+      { productId: 1, nameMy: 'ရှပ်', kind: 'piece', qty: 3, tenths: 0, totalKs: 45000 },
+      { productId: 2, nameMy: 'ပိုး', kind: 'length', qty: 0, tenths: 540, totalKs: 12000 },
+    ])
   })
 })

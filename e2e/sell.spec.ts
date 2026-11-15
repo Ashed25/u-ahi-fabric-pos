@@ -91,3 +91,40 @@ test('practice mode records nothing', async ({ page }) => {
   await nav(page, '#/sales')
   await expect(page.getByText('အရောင်း 0 ခု — 0 ကျပ်')).toBeVisible()
 })
+
+test('daily summary lists every product sold; the calendar picks a day', async ({ page }) => {
+  await scan(page, SHIRT_M)
+  await scan(page, SHIRT_M)
+  await scan(page, '2000000000046') // T-shirt S, 8,500
+  await expect(page.getByTestId('total')).toHaveText('38,500')
+  await page.getByRole('button', { name: 'ငွေရှင်းရန်' }).click()
+  await page.getByRole('button', { name: '+ 20,000' }).click()
+  await page.getByRole('button', { name: '+ 20,000' }).click()
+  await page.getByRole('button', { name: /ပြီးပြီ/ }).click()
+  await page.getByRole('button', { name: 'နောက်တစ်ယောက်' }).click()
+
+  await nav(page, '#/today')
+  const items = page.getByTestId('day-items')
+  await expect(items.getByRole('listitem')).toHaveCount(2)
+  await expect(items.getByRole('listitem').nth(0)).toContainText('ရှပ်အင်္ကျီ အဖြူ')
+  await expect(items.getByRole('listitem').nth(0)).toContainText('30,000')
+  await expect(items.getByRole('listitem').nth(1)).toContainText('တီရှပ်')
+  await expect(items.getByRole('listitem').nth(1)).toContainText('8,500')
+
+  // Pick yesterday from the calendar: nothing sold, ▶ comes back to today
+  const date = page.getByLabel('date')
+  const today = await date.inputValue()
+  const [y, m, d] = today.split('-').map(Number)
+  const yesterday = new Date(Date.UTC(y, m - 1, d - 1)).toISOString().slice(0, 10)
+  await date.fill(yesterday)
+  await expect(page.getByTestId('day-total')).toContainText('0')
+  await expect(items.getByRole('listitem')).toHaveCount(0)
+  await page.getByRole('button', { name: '▶' }).click()
+  await expect(date).toHaveValue(today)
+  await expect(items.getByRole('listitem')).toHaveCount(2)
+
+  // Sales history uses the same picker
+  await nav(page, '#/sales')
+  await page.getByLabel('date').fill(yesterday)
+  await expect(page.getByText(/^အရောင်း 0 ခု/)).toBeVisible()
+})

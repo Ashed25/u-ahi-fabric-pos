@@ -1,5 +1,6 @@
 import type { ButtonHTMLAttributes, ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
+import { dateKey, yangonMidnight } from '../core/fy'
 import { go } from './router'
 
 const variants = {
@@ -70,6 +71,34 @@ export function Modal({ children, onClose }: { children: ReactNode; onClose?: ()
       >
         {children}
       </div>
+    </div>
+  )
+}
+
+const DAY = 86_400_000
+
+/** ◀ [date] ▶ — tapping the date opens the phone's calendar. Days are Yangon days; no future days. */
+export function DayPicker({ day, onChange }: { day: number; onChange: (ms: number) => void }) {
+  const today = dateKey(Date.now())
+  return (
+    <div className="flex items-center gap-2">
+      <Btn variant="plain" onClick={() => onChange(day - DAY)}>
+        ◀
+      </Btn>
+      <input
+        type="date"
+        aria-label="date"
+        className={`${inputCls} min-w-0 flex-1 text-center font-bold`}
+        value={dateKey(day)}
+        max={today}
+        onChange={(e) => {
+          const [y, m, d] = e.target.value.split('-').map(Number)
+          if (y && m && d) onChange(Math.min(yangonMidnight(y, m, d), Date.now()))
+        }}
+      />
+      <Btn variant="plain" disabled={dateKey(day) === today} onClick={() => onChange(day + DAY)}>
+        ▶
+      </Btn>
     </div>
   )
 }

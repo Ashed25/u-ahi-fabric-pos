@@ -9,7 +9,7 @@ import { audit } from '../db/audit'
 import { db } from '../db/schema'
 import { useSettings } from '../db/useSettings'
 import { methodName } from '../ui/format'
-import { Btn, Screen, inputCls, toInt } from '../ui/kit'
+import { Btn, DayPicker, Screen, inputCls, toInt } from '../ui/kit'
 import { CtWarning } from './Reports'
 
 const DAY = 86_400_000
@@ -59,15 +59,7 @@ export function Today() {
     <Screen title={t('today.title')}>
       <div className="mx-auto max-w-4xl space-y-4">
         <CtWarning />
-        <div className="flex items-center gap-2">
-          <Btn variant="plain" onClick={() => setDay(day - DAY)}>
-            ◀
-          </Btn>
-          <span className="flex-1 text-center text-2xl font-bold">{dateKey(day)}</span>
-          <Btn variant="plain" disabled={dateKey(day) === dateKey(Date.now())} onClick={() => setDay(day + DAY)}>
-            ▶
-          </Btn>
-        </div>
+        <DayPicker day={day} onChange={setDay} />
 
         <div className="rounded-3xl bg-slate-900 p-5 text-white">
           <div className="text-2xl">{t('today.sales', { count: s.count })}</div>
@@ -103,17 +95,29 @@ export function Today() {
           </div>
         )}
 
-        <section className="rounded-2xl border-2 border-slate-200 p-4">
-          <h2 className="mb-2 text-xl font-bold">{t('today.sold')}</h2>
-          <p className="text-xl">{t('today.pieces', { count: s.pieces })}</p>
-          {s.fabric.map((f) => (
-            <p key={f.productId} className="flex justify-between text-xl">
-              <span>{f.nameMy}</span>
-              <span>
-                <b>{formatLargestFirst(f.tenths, settings.units, lang)}</b> <span className="text-base text-slate-600">({formatInches(f.tenths)}")</span>
-              </span>
-            </p>
-          ))}
+        <section className="rounded-2xl border border-slate-200 p-4" data-testid="day-items">
+          <h2 className="mb-2 flex justify-between text-xl font-bold">
+            <span>{t('today.sold')}</span>
+            {s.pieces > 0 && <span className="text-base font-normal text-slate-600">{t('today.pieces', { count: s.pieces })}</span>}
+          </h2>
+          {!s.items.length && <p className="text-slate-500">—</p>}
+          <ul className="divide-y divide-slate-100">
+            {s.items.map((i) => (
+              <li key={i.productId} className="flex items-baseline gap-3 py-1.5">
+                <span className="min-w-0 flex-1">{i.nameMy}</span>
+                <span className="text-slate-700">
+                  {i.kind === 'piece' ? (
+                    t('today.pieces', { count: i.qty })
+                  ) : (
+                    <>
+                      {formatLargestFirst(i.tenths, settings.units, lang)} <span className="text-sm text-slate-500">({formatInches(i.tenths)}")</span>
+                    </>
+                  )}
+                </span>
+                <b className="w-24 text-right tabular-nums">{formatKs(i.totalKs)}</b>
+              </li>
+            ))}
+          </ul>
         </section>
 
         {settings.cashCheck && dateKey(day) === dateKey(Date.now()) && (

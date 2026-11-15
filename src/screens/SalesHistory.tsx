@@ -10,11 +10,10 @@ import { useSettings } from '../db/useSettings'
 import { methodName, unitName } from '../ui/format'
 import { voidSale } from '../db/returns'
 import { useSession } from '../session'
-import { Btn, Field, Modal, Screen, inputCls } from '../ui/kit'
+import { Btn, DayPicker, Field, Modal, Screen, inputCls } from '../ui/kit'
 import { ReceiptModal } from '../ui/ReceiptModal'
 import { go } from '../ui/router'
 
-const DAY = 86_400_000
 
 export function SalesHistory() {
   const { t, i18n } = useTranslation()
@@ -48,15 +47,7 @@ export function SalesHistory() {
       <div className="mx-auto max-w-4xl space-y-3">
         <input className={inputCls} placeholder={t('history.search')} value={q} onChange={(e) => setQ(e.target.value)} />
         {!q && (
-          <div className="flex items-center gap-2">
-            <Btn variant="plain" onClick={() => setDay(day - DAY)}>
-              ◀
-            </Btn>
-            <span className="flex-1 text-center text-2xl font-bold">{dateKey(day)}</span>
-            <Btn variant="plain" disabled={dateKey(day) === dateKey(Date.now())} onClick={() => setDay(day + DAY)}>
-              ▶
-            </Btn>
-          </div>
+          <DayPicker day={day} onChange={setDay} />
         )}
         <p className="text-xl">{t('history.summary', { count: completed.length, total: formatKs(total) })}</p>
         <ul className="divide-y-2 divide-slate-200">

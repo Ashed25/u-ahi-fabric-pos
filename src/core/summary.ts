@@ -9,7 +9,8 @@ export interface DaySummary {
   netKs: number // money taken − money given back
   cashNetKs: number // what the cash drawer should have gained
   pieces: number
-  fabric: { productId: number; nameMy: string; tenths: number }[]
+  /** Every product sold that day, biggest money first (line totals, before any whole-sale discount). */
+  items: { productId: number; nameMy: string; kind: 'piece' | 'length'; qty: number; tenths: number; totalKs: number }[]
 }
 
 /**
@@ -26,15 +27,15 @@ export function summarize(sales: Sale[], lines: SaleLine[], payments: Payment[],
     else if (ids.has(p.saleId) && p.method !== 'credit') byMethod[p.method] = (byMethod[p.method] ?? 0) + p.amountKs
   }
   const sum = (r: Record<string, number>) => Object.values(r).reduce((a, b) => a + b, 0)
-  const fabric = new Map<number, { productId: number; nameMy: string; tenths: number }>()
+  const items = new Map<number, DaySummary['items'][number]>()
   let pieces = 0
   for (const l of lines.filter((l) => ids.has(l.saleId))) {
     if (l.kind === 'piece') pieces += l.qty ?? 0
-    else {
-      const f = fabric.get(l.productId) ?? { productId: l.productId, nameMy: l.nameMy, tenths: 0 }
-      f.tenths += l.lengthTenths ?? 0
-      fabric.set(l.productId, f)
-    }
+    const x = items.get(l.productId) ?? { productId: l.productId, nameMy: l.nameMy, kind: l.kind, qty: 0, tenths: 0, totalKs: 0 }
+    x.qty += l.qty ?? 0
+    x.tenths += l.lengthTenths ?? 0
+    x.totalKs += l.lineTotalKs
+    items.set(l.productId, x)
   }
   return {
     count: done.length,
@@ -45,7 +46,7 @@ export function summarize(sales: Sale[], lines: SaleLine[], payments: Payment[],
     netKs: sum(byMethod) - sum(paidOutByMethod),
     cashNetKs: (byMethod.cash ?? 0) - (paidOutByMethod.cash ?? 0),
     pieces,
-    fabric: [...fabric.values()].sort((a, b) => b.tenths - a.tenths),
+    items: [...items.values()].sort((a, b) => b.totalKs - a.totalKs),
   }
 }
 
