@@ -24,6 +24,7 @@ test('month report: sales, profit from costs, Excel export; CT warning and CT re
   await expect(page.getByTestId('gross')).toHaveText('27,000')
   await expect(page.getByTestId('profit')).toContainText('10,500')
   await expect(page.getByText('ပိုးထည် အပြာ')).toBeVisible()
+  await expect(page.getByTestId('trend').getByRole('button', { name: /: 27,000 ကျပ်$/ })).toHaveCount(1) // dashboard chart: one bar holds today's sale
 
   const download = page.waitForEvent('download')
   await page.getByRole('button', { name: /Excel ဖိုင် ထုတ်ရန်/ }).click()

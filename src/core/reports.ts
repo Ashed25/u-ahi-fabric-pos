@@ -1,4 +1,6 @@
 import type { CreditLine, CreditNote, Payment, Product, Sale, SaleLine } from '../db/schema'
+import type { PeriodKind } from './period'
+import { yangonMidnight, yangonParts } from './fy'
 import { roundFraction } from './pricing'
 
 /** Everything needed for one period. credit* hold the original sales/lines that returns refer to (may be older). */
@@ -116,4 +118,47 @@ export function buildReport(d: ReportInput): Report {
 export function ctThreshold(rolling12mNetKs: number, thresholdKs: number) {
   const pct = thresholdKs ? Math.floor((rolling12mNetKs * 100) / thresholdKs) : 0
   return { pct, level: pct >= 100 ? ('over' as const) : pct >= 80 ? ('near' as const) : ('ok' as const) }
+}
+
+export interface TrendBar {
+  label: string
+  totalKs: number
+  count: number
+}
+
+const HOUR = 3_600_000
+const DAY_MS = 24 * HOUR
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+/**
+ * Completed sales per hour (day), per day (week, month) or per month (quarter, year), Yangon time.
+ * A day shows at least 8:00–20:00, widened to any hour that had a sale.
+ */
+export function salesTrend(sales: Sale[], kind: PeriodKind, from: number, to: number): TrendBar[] {
+  const done = sales.filter((s) => s.status === 'completed' && s.at >= from && s.at < to)
+  let starts: number[]
+  let label: (start: number) => string
+  if (kind === 'day') {
+    const hours = done.map((s) => Math.floor((s.at - from) / HOUR))
+    const first = Math.min(8, ...hours)
+    const last = Math.max(20, ...hours)
+    starts = Array.from({ length: last - first + 1 }, (_, i) => from + (first + i) * HOUR)
+    label = (s) => String((s - from) / HOUR)
+  } else if (kind === 'week' || kind === 'month') {
+    starts = Array.from({ length: Math.round((to - from) / DAY_MS) }, (_, i) => from + i * DAY_MS) // Yangon has no DST
+    label = (s) => String(yangonParts(s).day)
+  } else {
+    const p = yangonParts(from)
+    starts = []
+    for (let m = 0; yangonMidnight(p.year, p.month + m, 1) < to; m++) starts.push(yangonMidnight(p.year, p.month + m, 1))
+    label = (s) => MONTHS[yangonParts(s).month - 1]
+  }
+  const bars = starts.map((s) => ({ label: label(s), totalKs: 0, count: 0 }))
+  for (const s of done) {
+    let i = starts.length - 1
+    while (i > 0 && starts[i] > s.at) i--
+    bars[i].totalKs += s.totalKs
+    bars[i].count++
+  }
+  return bars
 }

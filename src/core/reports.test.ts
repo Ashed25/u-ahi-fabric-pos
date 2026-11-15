@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { periodBounds, periodLabel, shiftRef } from './period'
-import { buildReport, ctThreshold, type ReportInput } from './reports'
+import { buildReport, ctThreshold, type ReportInput, salesTrend } from './reports'
 import type { Sale, SaleLine } from '../db/schema'
 
 const at = (iso: string) => Date.parse(iso)
@@ -75,5 +75,32 @@ describe('report', () => {
     expect(ctThreshold(39_999_999, 50_000_000).level).toBe('ok')
     expect(ctThreshold(40_000_000, 50_000_000)).toEqual({ pct: 80, level: 'near' })
     expect(ctThreshold(50_000_000, 50_000_000).level).toBe('over')
+  })
+})
+
+describe('sales trend', () => {
+  const s = (id: string, iso: string, totalKs: number, status: Sale['status'] = 'completed') => sale(id, { at: at(iso), totalKs, status })
+  const sales = [
+    s('A-1', '2026-11-14T07:30:00+06:30', 1000), // before 8:00 widens the day
+    s('A-2', '2026-11-14T10:05:00+06:30', 2000),
+    s('A-3', '2026-11-14T10:55:00+06:30', 3000),
+    s('A-4', '2026-11-14T11:00:00+06:30', 9000, 'void'), // voids never count
+    s('A-5', '2026-11-30T23:59:00+06:30', 4000),
+  ]
+  it('a day by hour, at least 8–20', () => {
+    const bars = salesTrend(sales, 'day', ...periodBounds('day', at('2026-11-14T12:00:00+06:30')))
+    expect(bars.map((b) => b.label)).toEqual(['7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20'])
+    expect(bars[0]).toEqual({ label: '7', totalKs: 1000, count: 1 })
+    expect(bars[3]).toEqual({ label: '10', totalKs: 5000, count: 2 })
+    expect(bars[4].totalKs).toBe(0)
+  })
+  it('a month by day, a year by month', () => {
+    const month = salesTrend(sales, 'month', ...periodBounds('month', at('2026-11-14T12:00:00+06:30')))
+    expect(month).toHaveLength(30)
+    expect(month[13]).toEqual({ label: '14', totalKs: 6000, count: 3 })
+    expect(month[29]).toEqual({ label: '30', totalKs: 4000, count: 1 }) // last minute stays in its own day
+    const fy = salesTrend(sales, 'fy', ...periodBounds('fy', at('2026-11-14T12:00:00+06:30')))
+    expect(fy.map((b) => b.label)).toEqual(['Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar'])
+    expect(fy[7].totalKs).toBe(10000)
   })
 })
