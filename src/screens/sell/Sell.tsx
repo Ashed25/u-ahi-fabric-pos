@@ -179,24 +179,29 @@ function SellScreen({ settings }: { settings: Settings }) {
 
   return (
     <div className="flex h-dvh flex-col">
-      <header className="flex items-center gap-2 bg-blue-900 px-4 py-2 text-white">
-        <h1 className="flex-1 truncate text-2xl font-bold">{settings.shopName}</h1>
+      <header className="flex items-center gap-1.5 bg-blue-900 px-3 py-1.5 text-white shadow">
+        <h1 className="min-w-0 flex-1 truncate text-lg font-bold sm:text-xl">{settings.shopName}</h1>
         {lines.length > 0 && (
-          <Btn variant="plain" onClick={async () => (await parkSale(lines), setLines([]), setFlash({ ok: true, text: t('sell.heldOk') }))}>
-            ⏸ {t('sell.hold')}
+          <Btn
+            variant="plain"
+            className="min-h-10 px-3 text-base"
+            aria-label={t('sell.hold')}
+            onClick={async () => (await parkSale(lines), setLines([]), setFlash({ ok: true, text: t('sell.heldOk') }))}
+          >
+            ⏸<span className="hidden sm:inline"> {t('sell.hold')}</span>
           </Btn>
         )}
         {(held?.length ?? 0) > 0 && (
-          <Btn variant="plain" onClick={() => setHeldOpen(true)}>
+          <Btn variant="plain" className="min-h-10 px-3 text-base" onClick={() => setHeldOpen(true)}>
             {t('sell.held', { count: held!.length })}
           </Btn>
         )}
         <SyncBadge />
-        <span className="hidden text-lg md:inline">👤 {user?.name}</span>
-        <Btn variant="plain" onClick={() => go('#/menu')}>
-          ☰ {t('sell.menu')}
+        <span className="hidden text-base md:inline">👤 {user?.name}</span>
+        <Btn variant="plain" className="min-h-10 px-3 text-base" aria-label={t('sell.menu')} onClick={() => go('#/menu')}>
+          ☰<span className="hidden sm:inline"> {t('sell.menu')}</span>
         </Btn>
-        <Btn variant="plain" aria-label={t('lock.lock')} onClick={lock}>
+        <Btn variant="plain" className="min-h-10 px-3 text-base" aria-label={t('lock.lock')} onClick={lock}>
           🔒
         </Btn>
       </header>
@@ -234,67 +239,71 @@ function SellScreen({ settings }: { settings: Settings }) {
         </Modal>
       )}
 
-      <div className="grid min-h-0 flex-1 grid-rows-[1fr_auto] lg:grid-cols-[1fr_26rem] lg:grid-rows-1">
+      <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)] grid-rows-[1fr_auto] bg-slate-50 lg:grid-cols-[minmax(0,1fr)_22rem] lg:grid-rows-1">
         <section className="flex min-h-0 flex-col">
           <div
-            className={`m-3 rounded-2xl p-3 text-center text-2xl font-bold ${flash ? (flash.ok ? 'bg-green-100 text-green-900' : 'bg-red-100 text-red-900') : 'bg-slate-100 text-slate-600'}`}
+            className={`m-3 rounded-xl border border-dashed p-2.5 text-center text-lg font-bold lg:text-xl ${flash ? (flash.ok ? 'border-green-300 bg-green-50 text-green-800' : 'border-red-300 bg-red-50 text-red-800') : 'border-slate-300 bg-white text-slate-500'}`}
             data-testid="scan-area"
           >
             {flash?.text ?? `▮▯▮ ${t('sell.scanHere')}`}
           </div>
-          <ul className="flex-1 divide-y-2 divide-slate-200 overflow-auto px-3" data-testid="cart">
+          <ul className="mx-3 mb-3 flex-1 divide-y divide-slate-100 overflow-auto rounded-xl bg-white shadow-sm empty:shadow-none" data-testid="cart">
             {lines.map((l) => (
               <li key={l.key}>
-                <button className="flex w-full items-center gap-3 py-2 text-left" onClick={() => setEditKey(l.key)}>
-                  <Photo blob={photos?.get(l.productId)} className="h-16 w-16 shrink-0 rounded-xl" />
+                <button className="flex w-full items-center gap-3 px-3 py-2 text-left active:bg-slate-50" onClick={() => setEditKey(l.key)}>
+                  <Photo blob={photos?.get(l.productId)} className="h-12 w-12 shrink-0 rounded-lg lg:h-14 lg:w-14" />
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-2xl font-bold">{l.nameMy}</span>
+                    <span className="block truncate text-lg font-bold">{l.nameMy}</span>
                     {l.kind === 'piece' ? (
-                      <span className="block text-xl text-slate-700">
+                      <span className="block text-base text-slate-600">
                         {l.sub} {l.qty > 1 && <b>× {l.qty}</b>}
                       </span>
                     ) : (
-                      <span className="block text-xl text-slate-700">
-                        <b>{formatEntered(l.entered, settings.units, lang)}</b> <span className="text-base">({formatInches(l.lengthTenths)}")</span>
+                      <span className="block text-base text-slate-600">
+                        <b>{formatEntered(l.entered, settings.units, lang)}</b> <span className="text-sm">({formatInches(l.lengthTenths)}")</span>
                         {(l.remnantPct || l.wholeRemnant) && <span className="ml-2 text-amber-700">✂ {l.remnantPct ? `−${l.remnantPct}%` : t('stock.remnant')}</span>}
                       </span>
                     )}
                   </span>
-                  <span className="text-3xl font-bold">{formatKs(lineTotal(l))}</span>
+                  <span className="text-xl font-bold tabular-nums">{formatKs(lineTotal(l))}</span>
                 </button>
               </li>
             ))}
           </ul>
         </section>
 
-        <aside className="flex flex-col gap-3 border-t-2 border-slate-200 p-3 lg:border-l-2 lg:border-t-0">
-          <div className="rounded-2xl bg-slate-900 p-4 text-right text-white">
-            <div className="text-xl">{t('pay.total')}</div>
-            <div className="text-6xl font-bold" data-testid="total">
-              {formatKs(totals.totalKs)}
+        <aside className="flex flex-col gap-2 border-t border-slate-200 bg-white p-3 lg:gap-3 lg:border-l lg:border-t-0">
+          <div className="rounded-xl bg-slate-900 px-4 py-2 text-right text-white lg:py-3">
+            <div className="flex items-baseline justify-end gap-3 lg:block">
+              <span className="text-base text-slate-300">{t('pay.total')}</span>
+              <div className="text-4xl font-bold tabular-nums lg:text-5xl" data-testid="total">
+                {formatKs(totals.totalKs)}
+              </div>
             </div>
             {discountKs > 0 && (
-              <div className="text-lg" data-testid="discount">
+              <div className="text-sm text-slate-300" data-testid="discount">
                 {t('receipt.discount')} −{formatKs(discountKs)}
                 {discount?.pct ? ` (${discount.pct}%)` : ''}
               </div>
             )}
-            {totals.ctKs > 0 && <div className="text-base">{t('receipt.ct')} {formatKs(totals.ctKs)}</div>}
+            {totals.ctKs > 0 && <div className="text-sm text-slate-300">{t('receipt.ct')} {formatKs(totals.ctKs)}</div>}
           </div>
-          <Btn variant="ok" className="min-h-24 text-4xl" disabled={!lines.length} onClick={() => setPaying(true)}>
+          <Btn variant="ok" className="min-h-14 text-2xl lg:min-h-20 lg:text-3xl" disabled={!lines.length} onClick={() => setPaying(true)}>
             {t('sell.pay')}
           </Btn>
-          <Btn variant="danger" className="min-h-18 text-2xl" disabled={!lines.length} onClick={() => setLines(removeLast(lines))}>
-            {t('sell.removeLast')}
-          </Btn>
-          <Btn variant="plain" className="min-h-18 text-2xl" onClick={() => setGrid({ kind: 'sell' })}>
-            📷 {t('sell.byPhoto')}
-          </Btn>
-          {atLeast(user, 'manager') && lines.length > 0 && (
-            <Btn variant="plain" onClick={() => setDiscountOpen(true)}>
-              % {t('discount.button')}
+          <div className="flex gap-2 lg:flex-col lg:gap-3">
+            <Btn variant="danger" className="min-w-0 flex-1 px-2 text-base lg:min-h-14 lg:flex-none lg:text-lg" disabled={!lines.length} onClick={() => setLines(removeLast(lines))}>
+              {t('sell.removeLast')}
             </Btn>
-          )}
+            <Btn variant="plain" className="min-w-0 flex-1 px-2 text-base lg:min-h-14 lg:flex-none lg:text-lg" onClick={() => setGrid({ kind: 'sell' })}>
+              📷 {t('sell.byPhoto')}
+            </Btn>
+            {atLeast(user, 'manager') && lines.length > 0 && (
+              <Btn variant="plain" className="shrink-0 px-3 text-base lg:text-lg" aria-label={t('discount.button')} onClick={() => setDiscountOpen(true)}>
+                %<span className="hidden lg:inline"> {t('discount.button')}</span>
+              </Btn>
+            )}
+          </div>
         </aside>
       </div>
 

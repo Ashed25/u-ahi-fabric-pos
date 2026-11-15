@@ -66,17 +66,17 @@ export function LengthEntry({
 
   return (
     <div className="fixed inset-0 z-40 overflow-auto bg-white">
-      <div className="mx-auto flex max-w-5xl flex-col gap-4 p-4">
+      <div className="mx-auto flex max-w-5xl flex-col gap-3 p-3 sm:p-4">
         <div className="flex items-center gap-4">
-          <Photo blob={p.photo} className="h-24 w-24 shrink-0 rounded-2xl" />
-          <div className="flex-1">
-            <h2 className="text-3xl font-bold">{p.nameMy}</h2>
-            <p className="text-xl text-slate-700">
+          <Photo blob={p.photo} className="h-16 w-16 shrink-0 rounded-xl sm:h-20 sm:w-20" />
+          <div className="min-w-0 flex-1">
+            <h2 className="text-2xl font-bold">{p.nameMy}</h2>
+            <p className="text-base text-slate-600">
               {priceText(t, p, settings.units, lang)}
               {p.widthTenths ? ` · ${t('product.width')} ${formatInches(p.widthTenths)}"` : ''}
             </p>
             {roll && rolls!.length === 1 && (
-              <p className="text-xl">
+              <p className="text-base">
                 {t('sell.rollLeft')}: <b>{fmt(roll.remainingTenths)}</b> <span className="text-base text-slate-600">({formatInches(roll.remainingTenths)}")</span>
               </p>
             )}
@@ -94,7 +94,7 @@ export function LengthEntry({
         )}
 
         {roll?.status === 'remnant' && (
-          <div className="flex flex-wrap items-center gap-3 rounded-2xl bg-amber-50 p-3 text-xl">
+          <div className="flex flex-wrap items-center gap-3 rounded-xl bg-amber-50 p-3 text-base">
             <span>✂ {roll.remnantPct ? t('stock.remnantPct', { pct: roll.remnantPct }) : t('stock.remnantWhole', { price: formatKs(roll.remnantPriceKs ?? 0) })}</span>
             {roll.remnantPriceKs != null && (
               <Btn
@@ -113,7 +113,7 @@ export function LengthEntry({
         {(p.quickCuts?.length ?? 0) > 0 && (
           <div className="flex flex-wrap gap-2">
             {p.quickCuts!.map((c, i) => (
-              <Btn key={i} variant="plain" className="min-w-36 text-2xl" onClick={() => setEntered(c)}>
+              <Btn key={i} variant="plain" className="min-w-28 text-lg" onClick={() => setEntered(c)}>
                 {formatEntered(c, settings.units, lang)}
               </Btn>
             ))}
@@ -124,32 +124,32 @@ export function LengthEntry({
 
         <div className="flex gap-2">
           <input
-            className="w-48 rounded-xl border-2 border-slate-300 px-4 text-xl"
+            className="w-36 min-w-0 rounded-lg border border-slate-300 px-3 text-lg shadow-sm outline-none focus:border-blue-700 focus:ring-2 focus:ring-blue-200"
             inputMode="decimal"
             placeholder={t('sell.inchesKeypad')}
             value={inches}
             onChange={(e) => setInches(e.target.value)}
           />
-          <Btn variant="plain" onClick={addInches}>
+          <Btn variant="plain" className="whitespace-nowrap px-3" onClick={addInches}>
             + {t('unit.inches')}
           </Btn>
-          <Btn variant="plain" className="ml-auto" disabled={!entered.length} onClick={() => setEntered([])}>
+          <Btn variant="plain" className="ml-auto whitespace-nowrap px-3" disabled={!entered.length} onClick={() => setEntered([])}>
             {t('sell.clearLength')}
           </Btn>
         </div>
 
-        {tooLong && <p className="rounded-xl bg-amber-100 p-3 text-xl font-bold text-amber-900">⚠ {t('sell.longerThanRoll')}</p>}
+        {tooLong && <p className="rounded-xl bg-amber-100 p-3 text-base font-bold text-amber-900">⚠ {t('sell.longerThanRoll')}</p>}
 
         {/* Price and OK/Cancel stay on screen without scrolling. */}
-        <div className="sticky bottom-0 -mx-4 grid grid-cols-[1fr_auto_auto] items-center gap-3 border-t-2 border-slate-200 bg-white p-4">
-          <div className="text-6xl font-bold text-blue-900" data-testid="length-price">
-            {formatKs(totalKs)} <span className="text-3xl">{t('common.ks')}</span>
-            {pct > 0 && !whole && <span className="ml-2 text-2xl text-amber-700">−{pct}%</span>}
+        <div className="sticky bottom-0 -mx-3 grid grid-cols-[1fr_auto_auto] items-center gap-2 border-t border-slate-200 bg-white p-3 shadow-[0_-2px_8px_rgba(0,0,0,0.05)] sm:-mx-4 sm:gap-3 sm:p-4">
+          <div className="min-w-0 text-3xl font-bold tabular-nums text-blue-900 sm:text-5xl" data-testid="length-price">
+            {formatKs(totalKs)} <span className="text-lg sm:text-2xl">{t('common.ks')}</span>
+            {pct > 0 && !whole && <span className="ml-2 text-lg text-amber-700">−{pct}%</span>}
           </div>
-          <Btn variant="plain" className="min-h-20 px-8 text-3xl" onClick={onCancel}>
+          <Btn variant="plain" className="min-h-14 whitespace-nowrap px-4 text-lg sm:min-h-16 sm:px-6 sm:text-2xl" onClick={onCancel}>
             {t('common.cancel')}
           </Btn>
-          <Btn variant="ok" className="min-h-20 px-10 text-3xl" disabled={!entered.length} onClick={() => onOk(entered, roll, whole)}>
+          <Btn variant="ok" className="min-h-14 whitespace-nowrap px-6 text-xl sm:min-h-16 sm:px-8 sm:text-2xl" disabled={!entered.length} onClick={() => onOk(entered, roll, whole)}>
             {t('common.ok')}
           </Btn>
         </div>

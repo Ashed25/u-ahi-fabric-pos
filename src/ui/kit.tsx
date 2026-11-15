@@ -3,10 +3,10 @@ import { useTranslation } from 'react-i18next'
 import { go } from './router'
 
 const variants = {
-  primary: 'bg-blue-800 text-white active:bg-blue-950 disabled:bg-slate-400',
-  ok: 'bg-green-700 text-white active:bg-green-900 disabled:bg-slate-400',
-  danger: 'bg-red-700 text-white active:bg-red-900 disabled:bg-slate-400',
-  plain: 'bg-slate-100 text-slate-900 border-2 border-slate-300 active:bg-slate-300 disabled:text-slate-400',
+  primary: 'bg-blue-800 text-white shadow-sm active:bg-blue-950 disabled:bg-slate-300 disabled:shadow-none',
+  ok: 'bg-green-700 text-white shadow-sm active:bg-green-900 disabled:bg-slate-300 disabled:shadow-none',
+  danger: 'bg-red-700 text-white shadow-sm active:bg-red-900 disabled:bg-slate-300 disabled:shadow-none',
+  plain: 'bg-white text-slate-800 border border-slate-300 shadow-sm active:bg-slate-100 disabled:text-slate-400 disabled:shadow-none',
 }
 
 export function Btn({
@@ -15,8 +15,8 @@ export function Btn({
   ...p
 }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: keyof typeof variants }) {
   // Default text-xl only when the caller sets no size: two text-* classes would fight.
-  const size = /\btext-(xs|sm|base|lg|xl|\dxl)\b/.test(className) ? '' : 'text-xl'
-  return <button {...p} className={`rounded-2xl px-5 font-bold ${size} ${variants[variant]} ${className}`} />
+  const size = /\btext-(xs|sm|base|lg|xl|\dxl)\b/.test(className) ? '' : 'text-lg'
+  return <button {...p} className={`rounded-xl px-4 font-bold transition-colors ${size} ${variants[variant]} ${className}`} />
 }
 
 export function Screen({
@@ -33,13 +33,13 @@ export function Screen({
   const { t } = useTranslation()
   return (
     <div className="flex min-h-dvh flex-col">
-      <header className="no-print sticky top-0 z-10 flex items-center gap-3 bg-blue-900 px-4 py-2 text-white">
+      <header className="no-print sticky top-0 z-10 flex flex-wrap items-center gap-2 bg-blue-900 px-3 py-1.5 text-white shadow">
         {back !== null && (
-          <button className="rounded-xl px-3 text-xl" onClick={() => go(back)}>
+          <button className="min-h-10 shrink-0 rounded-lg px-2 text-lg active:bg-blue-950" onClick={() => go(back)}>
             ← {t('common.back')}
           </button>
         )}
-        <h1 className="flex-1 truncate text-2xl font-bold">{title}</h1>
+        <h1 className="min-w-32 flex-1 truncate text-xl font-bold">{title}</h1>
         {actions}
       </header>
       <main className="flex-1 p-4">{children}</main>
@@ -57,14 +57,15 @@ export function Field({ label, children, hint }: { label: string; children: Reac
   )
 }
 
-export const inputCls = 'w-full rounded-xl border-2 border-slate-300 bg-white px-4 py-3 text-xl focus:border-blue-700 outline-none'
+export const inputCls =
+  'w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-lg shadow-sm outline-none focus:border-blue-700 focus:ring-2 focus:ring-blue-200'
 
 export function Modal({ children, onClose }: { children: ReactNode; onClose?: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
       <div
         role="dialog"
-        className="max-h-[90dvh] w-full max-w-2xl overflow-auto rounded-3xl bg-white p-6"
+        className="max-h-[90dvh] w-full max-w-xl overflow-auto rounded-2xl bg-white p-5 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         {children}

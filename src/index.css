@@ -8,19 +8,19 @@
 
 /* In the base layer so per-element utilities (min-h-20, text-4xl …) can override them. */
 @layer base {
-  /* Elderly users: 20px minimum body text; large-text mode bumps everything. */
+  /* Everything is sized in rem: this one value scales the whole app. Large-text mode is for elderly users. */
   html {
-    font-size: 20px;
+    font-size: 16px;
   }
   html.large-text {
-    font-size: 24px;
+    font-size: 20px;
   }
   body {
     @apply bg-white text-slate-900 antialiased;
-    line-height: 1.7; /* Myanmar script needs extra line height */
+    line-height: 1.6; /* Myanmar script needs extra line height */
   }
   button {
-    @apply min-h-16 cursor-pointer select-none;
+    @apply min-h-12 cursor-pointer select-none;
   }
 }
 
