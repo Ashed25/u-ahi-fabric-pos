@@ -17,8 +17,15 @@ export function Backup() {
       const { blob, filename } = await exportBackup()
       // Share sheet lets the owner send it straight to Google Drive / Viber; fall back to a download.
       const file = new File([blob], filename, { type: 'application/json' })
-      if (navigator.canShare?.({ files: [file] })) await navigator.share({ files: [file], title: filename })
-      else download(blob, filename)
+      if (navigator.canShare?.({ files: [file] })) {
+        try {
+          await navigator.share({ files: [file], title: filename })
+        } catch (e) {
+          // Share refused (the tap "expired" while the backup was built, or .json not allowed): download instead.
+          if ((e as Error).name !== 'NotAllowedError') throw e
+          download(blob, filename)
+        }
+      } else download(blob, filename)
       await setSetting('lastBackupAt', Date.now())
       setMsg({ ok: true, text: t('backup.exported') })
     } catch (e) {

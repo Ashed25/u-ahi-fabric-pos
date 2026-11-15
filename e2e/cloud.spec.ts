@@ -32,3 +32,18 @@ test('changes are queued for the cloud; cloud setup screen; daily backup reminde
   await page.getByLabel('Supabase user စကားဝှက်').fill('secret')
   await expect(page.getByRole('button', { name: 'ချိတ်ဆက်မည်' })).toBeEnabled()
 })
+
+test('backup still downloads when the share sheet is refused (NotAllowedError)', async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.assign(navigator, {
+      canShare: () => true,
+      share: () => Promise.reject(new DOMException('Permission denied', 'NotAllowedError')),
+    })
+  })
+  await start(page, { demo: false })
+  await nav(page, '#/backup')
+  const download = page.waitForEvent('download')
+  await page.getByRole('button', { name: /အရန်ဖိုင် သိမ်းရန်/ }).click()
+  await download
+  await expect(page.getByText('အရန်ဖိုင် သိမ်းပြီးပါပြီ')).toBeVisible()
+})

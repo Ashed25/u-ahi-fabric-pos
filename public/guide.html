@@ -85,17 +85,25 @@
         background: #fef3c7;
         font-size: 15px;
       }
-      .print {
-        display: block;
-        margin: 0 auto 12px;
-        padding: 10px 24px;
-        border: 0;
+      .tools {
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+        margin: 0 0 12px;
+      }
+      .tools button {
+        padding: 10px 20px;
+        border: 2px solid var(--blue);
         border-radius: 12px;
         background: var(--blue);
         color: #fff;
         font: inherit;
         font-size: 18px;
         cursor: pointer;
+      }
+      .tools .back {
+        background: #fff;
+        color: var(--blue);
       }
       @media (max-width: 700px) {
         .grid {
@@ -112,7 +120,7 @@
           font-size: 12.5px;
           line-height: 1.6;
         }
-        .print {
+        .tools {
           display: none;
         }
         h1 {
@@ -130,7 +138,18 @@
     </style>
   </head>
   <body>
-    <button class="print" onclick="print()">🖨 ပရင့်ထုတ်ရန်</button>
+    <div class="tools">
+      <button class="back" onclick="goBack()">← နောက်သို့</button>
+      <button onclick="print()">🖨 ပရင့်ထုတ်ရန်</button>
+    </div>
+    <script>
+      // The app opens this guide in a new tab/window, where an installed app shows no back button.
+      function goBack() {
+        if (history.length > 1) return history.back()
+        window.close()
+        setTimeout(() => (location.href = './'), 300) // close was blocked: open the app here instead
+      }
+    </script>
     <h1>ဦးအဟိ အထည်ဆိုင် — ရောင်းနည်း</h1>
     <p class="sub">🔒 စဝင်ရင် ကိုယ့် <b>PIN ဂဏန်း ၄ လုံး</b> ကို နှိပ်ပါ။ မသေချာရင် သားသမီး / ပိုင်ရှင်ကို ခေါ်ပါ။</p>
 
