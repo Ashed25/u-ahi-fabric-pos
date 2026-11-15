@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import { expect, type Page, test } from '@playwright/test'
 import { nav, scan, start } from './helpers'
 
@@ -53,4 +54,14 @@ test('owner adds a fabric and a shirt, links a supplier barcode, scans it, previ
   await expect(page.locator('.label-box')).toHaveCount(3)
   await expect(page.locator('.label-box svg rect').first()).toBeAttached()
   await page.screenshot({ path: 'test-results/labels-40x30.png' })
+
+  // Phone/tablet app: print() does nothing (no print dialog) -> the hint shows, and the label file can be shared/downloaded
+  await page.evaluate(() => (window.print = () => {}))
+  await page.getByRole('button', { name: /ပရင့်ထုတ်ရန်/ }).click()
+  await expect(page.getByRole('alert')).toContainText('Chrome')
+  const download = page.waitForEvent('download')
+  await page.getByRole('button', { name: /လေဘယ်ဖိုင် ပို့ရန်/ }).click()
+  const html = readFileSync((await (await download).path())!, 'utf8')
+  expect(html.match(/class="label-box/g)).toHaveLength(3)
+  expect(html).toContain('<svg')
 })

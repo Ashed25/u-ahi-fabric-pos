@@ -77,29 +77,53 @@ export function Modal({ children, onClose }: { children: ReactNode; onClose?: ()
 
 const DAY = 86_400_000
 
-/** ◀ [date] ▶ — tapping the date opens the phone's calendar. Days are Yangon days; no future days. */
-export function DayPicker({ day, onChange }: { day: number; onChange: (ms: number) => void }) {
-  const today = dateKey(Date.now())
+/** ◀ [label 📅] ▶ — tapping the label opens the phone's calendar to jump straight to a date. Yangon days; no future days. */
+export function DateNav(p: { label: string; value: number; onPick: (ms: number) => void; onPrev: () => void; onNext: () => void; nextDisabled: boolean }) {
   return (
     <div className="flex items-center gap-2">
-      <Btn variant="plain" onClick={() => onChange(day - DAY)}>
+      <Btn variant="plain" onClick={p.onPrev}>
         ◀
       </Btn>
-      <input
-        type="date"
-        aria-label="date"
-        className={`${inputCls} min-w-0 flex-1 text-center font-bold`}
-        value={dateKey(day)}
-        max={today}
-        onChange={(e) => {
-          const [y, m, d] = e.target.value.split('-').map(Number)
-          if (y && m && d) onChange(Math.min(yangonMidnight(y, m, d), Date.now()))
-        }}
-      />
-      <Btn variant="plain" disabled={dateKey(day) === today} onClick={() => onChange(day + DAY)}>
+      <label className="relative flex min-h-12 flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-2 text-center text-xl font-bold shadow-sm">
+        <span data-testid="period">{p.label}</span>
+        <span aria-hidden>📅</span>
+        {/* Invisible input over the label: a tap anywhere opens the native calendar (showPicker for desktop browsers). */}
+        <input
+          type="date"
+          aria-label="date"
+          className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+          value={dateKey(p.value)}
+          max={dateKey(Date.now())}
+          onClick={(e) => {
+            try {
+              e.currentTarget.showPicker()
+            } catch {
+              /* older browsers open it on tap anyway */
+            }
+          }}
+          onChange={(e) => {
+            const [y, m, d] = e.target.value.split('-').map(Number)
+            if (y && m && d) p.onPick(Math.min(yangonMidnight(y, m, d), Date.now()))
+          }}
+        />
+      </label>
+      <Btn variant="plain" disabled={p.nextDisabled} onClick={p.onNext}>
         ▶
       </Btn>
     </div>
+  )
+}
+
+export function DayPicker({ day, onChange }: { day: number; onChange: (ms: number) => void }) {
+  return (
+    <DateNav
+      label={dateKey(day)}
+      value={day}
+      onPick={onChange}
+      onPrev={() => onChange(day - DAY)}
+      onNext={() => onChange(day + DAY)}
+      nextDisabled={dateKey(day) === dateKey(Date.now())}
+    />
   )
 }
 

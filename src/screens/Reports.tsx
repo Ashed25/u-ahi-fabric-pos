@@ -10,7 +10,7 @@ import { loadReport, rolling12mNetKs } from '../db/reports'
 import { db } from '../db/schema'
 import { useSettings } from '../db/useSettings'
 import { methodName } from '../ui/format'
-import { Btn, Screen } from '../ui/kit'
+import { Btn, DateNav, Screen } from '../ui/kit'
 import { go } from '../ui/router'
 import { exportAll, exportReport } from '../ui/xlsx'
 
@@ -91,17 +91,14 @@ export function Reports() {
             </Btn>
           ))}
         </div>
-        <div className="flex items-center gap-2">
-          <Btn variant="plain" onClick={() => setRef(shiftRef(kind, ref, -1))}>
-            ◀
-          </Btn>
-          <span className="flex-1 text-center text-2xl font-bold" data-testid="period">
-            {label}
-          </span>
-          <Btn variant="plain" disabled={isCurrent} onClick={() => setRef(shiftRef(kind, ref, 1))}>
-            ▶
-          </Btn>
-        </div>
+        <DateNav
+          label={label}
+          value={Math.min(ref, Date.now())}
+          onPick={setRef}
+          onPrev={() => setRef(shiftRef(kind, ref, -1))}
+          onNext={() => setRef(shiftRef(kind, ref, 1))}
+          nextDisabled={isCurrent}
+        />
 
         {/* Hero: the one number the owner looks at first */}
         <section className="rounded-2xl bg-slate-900 p-4 text-white">

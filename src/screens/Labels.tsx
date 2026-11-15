@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useTranslation } from 'react-i18next'
 import { type Barcode, db } from '../db/schema'
@@ -10,6 +10,7 @@ import { Btn, Field, Screen, inputCls, toInt } from '../ui/kit'
 import { Photo } from '../ui/photo'
 import { useRoute } from '../ui/router'
 import { dateKey } from '../core/fy'
+import { download } from '../db/backup'
 import { formatLargestFirst } from '../core/length'
 
 type Layout = 't40' | 't50' | 'a4' | 'book'
@@ -90,34 +91,17 @@ export function Labels() {
       price: priceText(t, rollProduct, settings.units, i18n.language),
     }
     return (
-      <div>
-        <div className="no-print sticky top-0 z-10 flex gap-3 bg-blue-900 p-2">
-          <Btn variant="plain" onClick={() => history.back()}>
-            ← {t('common.back')}
-          </Btn>
-          <Btn variant="ok" onClick={() => window.print()}>
-            🖨 {t('labels.print')}
-          </Btn>
-        </div>
+      <PrintView onBack={() => history.back()}>
         <PrintSheets layout="t50" items={[item]} settings={settings} skip={0} categories={data.categories} />
-      </div>
+      </PrintView>
     )
   }
 
   if (printing)
     return (
-      <div>
-        <div className="no-print sticky top-0 z-10 flex gap-3 bg-blue-900 p-2">
-          <Btn variant="plain" onClick={() => setPrinting(false)}>
-            ← {t('common.back')}
-          </Btn>
-          <Btn variant="ok" onClick={() => window.print()}>
-            🖨 {t('labels.print')}
-          </Btn>
-          <span className="self-center text-white">{t('labels.printHint')}</span>
-        </div>
+      <PrintView onBack={() => setPrinting(false)}>
         <PrintSheets layout={layout} items={items} settings={settings} skip={skip} categories={data.categories} />
-      </div>
+      </PrintView>
     )
 
   const shown = data.products.filter((p) => cat === undefined || p.categoryId === cat)
@@ -204,6 +188,90 @@ export function Labels() {
       </div>
     </Screen>
   )
+}
+
+/** Print toolbar + sheets. Installed phone/tablet apps silently ignore window.print(), so when no print
+ *  dialog shows up we offer the labels as a file to open in Chrome/Safari (or a label-printer app). */
+function PrintView({ onBack, children }: { onBack: () => void; children: ReactNode }) {
+  const { t } = useTranslation()
+  const sheets = useRef<HTMLDivElement>(null)
+  const [noDialog, setNoDialog] = useState(false)
+  const [error, setError] = useState<string>()
+
+  function print() {
+    let opened = false
+    const seen = () => (opened = true)
+    window.addEventListener('beforeprint', seen, { once: true })
+    window.print()
+    setTimeout(() => {
+      window.removeEventListener('beforeprint', seen)
+      if (!opened) setNoDialog(true)
+    }, 1500)
+  }
+
+  async function share() {
+    setError(undefined)
+    try {
+      const blob = new Blob([await labelsHtml(sheets.current!)], { type: 'text/html' })
+      const file = new File([blob], `labels-${dateKey(Date.now())}.html`, { type: 'text/html' })
+      if (navigator.canShare?.({ files: [file] })) {
+        try {
+          await navigator.share({ files: [file], title: file.name })
+        } catch (e) {
+          if ((e as Error).name !== 'NotAllowedError') throw e
+          download(blob, file.name)
+        }
+      } else download(blob, file.name)
+    } catch (e) {
+      if ((e as Error).name !== 'AbortError') setError(String(e))
+    }
+  }
+
+  return (
+    <div>
+      <div className="no-print sticky top-0 z-10 flex flex-wrap gap-3 bg-blue-900 p-2">
+        <Btn variant="plain" onClick={onBack}>
+          ← {t('common.back')}
+        </Btn>
+        <Btn variant="ok" onClick={print}>
+          🖨 {t('labels.print')}
+        </Btn>
+        <Btn variant="plain" onClick={share}>
+          📤 {t('labels.shareFile')}
+        </Btn>
+        <span className="self-center text-white">{t('labels.printHint')}</span>
+      </div>
+      {(noDialog || error) && (
+        <p className="no-print m-2 rounded-lg bg-amber-100 p-3 text-amber-900" role="alert">
+          {error ?? t('labels.noPrint')}
+        </p>
+      )}
+      <div ref={sheets}>{children}</div>
+    </div>
+  )
+}
+
+/** A stand-alone copy of the label sheets (app CSS inlined, photos embedded) that prints itself when opened in a browser. */
+async function labelsHtml(el: HTMLElement): Promise<string> {
+  const css = [...document.styleSheets]
+    .flatMap((sheet) => {
+      try {
+        return [...sheet.cssRules].map((r) => r.cssText)
+      } catch {
+        return [] // cross-origin sheet: not readable, not needed
+      }
+    })
+    .join('\n')
+  const copy = el.cloneNode(true) as HTMLElement
+  for (const img of copy.querySelectorAll('img')) {
+    const blob = await (await fetch(img.src)).blob()
+    img.src = await new Promise<string>((ok) => {
+      const r = new FileReader()
+      r.onload = () => ok(r.result as string)
+      r.readAsDataURL(blob)
+    })
+  }
+  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Labels</title><style>${css}</style></head><body>${copy.innerHTML}<script>onload=()=>setTimeout(print,500)</script></body></html>`
 }
 
 function Label({ item, shop, w, h }: { item: Item; shop: string; w: number; h: number }) {

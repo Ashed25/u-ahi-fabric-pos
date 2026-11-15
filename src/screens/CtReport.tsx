@@ -7,7 +7,7 @@ import { fyName } from '../core/period'
 import { buildReport } from '../core/reports'
 import { loadReportInput } from '../db/reports'
 import { useSettings } from '../db/useSettings'
-import { Btn, Screen } from '../ui/kit'
+import { Btn, DateNav, Screen } from '../ui/kit'
 import { exportCt } from '../ui/xlsx'
 import { CtWarning } from './Reports'
 
@@ -35,15 +35,14 @@ export function CtReport() {
       <div className="mx-auto max-w-5xl space-y-4">
         <CtWarning always />
         <p className="text-lg text-slate-700">{settings.ct.registered ? t('ct.registered', { rate: settings.ct.rateBp / 100 }) : t('ct.notRegistered')}</p>
-        <div className="flex items-center gap-2">
-          <Btn variant="plain" onClick={() => setFy(fy - 1)}>
-            ◀
-          </Btn>
-          <span className="flex-1 text-center text-2xl font-bold">FY {fyName(fy)}</span>
-          <Btn variant="plain" disabled={fy >= fyOf(Date.now())} onClick={() => setFy(fy + 1)}>
-            ▶
-          </Btn>
-        </div>
+        <DateNav
+          label={`FY ${fyName(fy)}`}
+          value={Math.min(fyBounds(fy)[0], Date.now())}
+          onPick={(ms) => setFy(fyOf(ms))}
+          onPrev={() => setFy(fy - 1)}
+          onNext={() => setFy(fy + 1)}
+          nextDisabled={fy >= fyOf(Date.now())}
+        />
         <div className="overflow-x-auto">
           <table className="w-full text-right text-xl">
             <thead>

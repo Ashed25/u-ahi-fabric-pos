@@ -35,6 +35,17 @@ test('month report: sales, profit from costs, Excel export; CT warning and CT re
   const schedule = XLSX.utils.sheet_to_json<Record<string, unknown>>(wb.Sheets['Sales schedule'])
   expect(schedule[0]).toMatchObject({ Number: 'A-000001', 'Total (Ks)': 27000 })
 
+  // Jump to an earlier month with the calendar: nothing sold there; ▶ steps back towards now
+  const period = page.getByTestId('period')
+  const [y, m] = (await period.textContent())!.split('-').map(Number)
+  const earlier = new Date(Date.UTC(y, m - 3, 15)).toISOString().slice(0, 10)
+  await page.getByLabel('date').fill(earlier)
+  await expect(period).toHaveText(earlier.slice(0, 7))
+  await expect(page.getByTestId('gross')).toHaveText('0')
+  await page.getByRole('button', { name: '▶' }).click()
+  await page.getByRole('button', { name: '▶' }).click()
+  await expect(page.getByTestId('gross')).toHaveText('27,000')
+
   // A low threshold triggers the CT registration warning on the menu
   await nav(page, '#/settings')
   await page.getByLabel(/CT မှတ်ပုံတင်ရန် နှစ်စဉ် အရောင်း/).fill('30000')

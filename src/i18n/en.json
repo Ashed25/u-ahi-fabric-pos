@@ -104,6 +104,8 @@
   "labels.preview": "Preview ({{count}} labels)",
   "labels.print": "Print",
   "labels.printHint": "In the print dialog choose Scale 100% and Margins: None",
+  "labels.shareFile": "Share label file",
+  "labels.noPrint": "The print window didn't open (installed apps on phones and tablets can't print). Tap “Share label file” and open it in Chrome or Safari to print, or send it to your label printer app.",
   "tagging.title": "Tagging day",
   "tagging.progress": "Labelled {{done}} / {{total}}",
   "tagging.printLabels": "Print this category",
