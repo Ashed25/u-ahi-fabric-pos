@@ -1,7 +1,7 @@
 import 'fake-indexeddb/auto'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { db } from './schema'
-import { assignBarcode, findByBarcode, importProducts, removeBarcode, saveProduct } from './products'
+import { assignBarcode, deleteCategory, deleteProduct, findByBarcode, importProducts, removeBarcode, saveProduct } from './products'
 import { isValidEan13 } from '../core/barcode'
 import { getSetting } from './settings'
 
@@ -75,5 +75,29 @@ describe('products & barcodes', () => {
     expect(await db.categories.count()).toBe(1)
     const codes = await db.barcodes.toArray()
     expect(codes.map((b) => b.source).sort()).toEqual(['assigned', 'generated'])
+  })
+
+  it('deletes a never-sold product with its barcodes; refuses one with sales or in a held sale', async () => {
+    const pid = await saveProduct(shirt, [{ productId: 0, size: 'M', qty: 0 }])
+    const sold = await saveProduct(silk)
+    const held = await saveProduct({ ...shirt, nameMy: 'held' }, [{ productId: 0, qty: 0 }])
+    await db.saleLines.add({ saleId: 'A-1', productId: sold, kind: 'length', nameMy: 'ပိုး', unitPriceKs: 8000, ctRateBp: 0, lineTotalKs: 8000 })
+    await db.parked.add({ at: 0, userId: 1, cart: [{ productId: held }] })
+    expect(await deleteProduct(pid)).toBe(true)
+    expect(await db.products.get(pid)).toBeUndefined()
+    expect(await db.variants.where('productId').equals(pid).count()).toBe(0)
+    expect(await db.barcodes.where('productId').equals(pid).count()).toBe(0)
+    expect(await deleteProduct(sold)).toBe(false)
+    expect(await deleteProduct(held)).toBe(false)
+    expect(await db.products.count()).toBe(2)
+  })
+
+  it('deletes only an unused category', async () => {
+    const used = (await db.categories.add({ nameMy: 'A', nameEn: '', sort: 0 })) as number
+    const empty = (await db.categories.add({ nameMy: 'B', nameEn: '', sort: 1 })) as number
+    await saveProduct({ ...silk, categoryId: used, active: false })
+    expect(await deleteCategory(used)).toBe(false)
+    expect(await deleteCategory(empty)).toBe(true)
+    expect((await db.categories.toArray()).map((c) => c.nameMy)).toEqual(['A'])
   })
 })

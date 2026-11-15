@@ -87,6 +87,38 @@ export async function removeBarcode(code: string) {
   })
 }
 
+/**
+ * Deletes a product that was never sold and isn't in a held sale, with its variants, barcodes, rolls and stock moves.
+ * Returns false when it has sales history: past sales, returns and reports point at it, so it can only be hidden.
+ */
+export async function deleteProduct(id: number): Promise<boolean> {
+  await requireRole('manager')
+  return db.transaction('rw', [db.products, db.variants, db.barcodes, db.rolls, db.stockMoves, db.saleLines, db.parked, db.audit], async () => {
+    if (await db.saleLines.where('productId').equals(id).count()) return false
+    if ((await db.parked.toArray()).some((h) => (h.cart as { productId: number }[]).some((l) => l.productId === id))) return false
+    const before = await db.products.get(id)
+    await db.rolls.where('productId').equals(id).delete()
+    await db.stockMoves.where('productId').equals(id).delete()
+    await db.barcodes.where('productId').equals(id).delete()
+    await db.variants.where('productId').equals(id).delete()
+    await db.products.delete(id)
+    await audit('product.delete', `product:${id}`, before, undefined)
+    return true
+  })
+}
+
+/** Deletes a category no product uses (hidden products count). Returns false otherwise. */
+export async function deleteCategory(id: number): Promise<boolean> {
+  await requireRole('manager')
+  return db.transaction('rw', [db.categories, db.products, db.audit], async () => {
+    if (await db.products.where('categoryId').equals(id).count()) return false
+    const before = await db.categories.get(id)
+    await db.categories.delete(id)
+    await audit('category.delete', `category:${id}`, before, undefined)
+    return true
+  })
+}
+
 export async function findByBarcode(code: string) {
   const b = await db.barcodes.get(code)
   if (!b) return undefined

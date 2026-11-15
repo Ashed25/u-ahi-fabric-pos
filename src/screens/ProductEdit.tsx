@@ -2,7 +2,7 @@ import { type ReactNode, useEffect, useRef, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useTranslation } from 'react-i18next'
 import { type EnteredLength, formatEntered, formatInches } from '../core/length'
-import { DEFAULT_QUICK_CUTS, removeBarcode, saveProduct } from '../db/products'
+import { DEFAULT_QUICK_CUTS, deleteProduct, removeBarcode, saveProduct } from '../db/products'
 import { type Barcode, type Product, type Variant, db } from '../db/schema'
 import { useSettings } from '../db/useSettings'
 import { BarcodeSvg } from '../ui/BarcodeSvg'
@@ -45,6 +45,7 @@ export function ProductEdit({ id }: { id?: number }) {
   const [newCat, setNewCat] = useState<string>()
   const [cutDraft, setCutDraft] = useState<EnteredLength>()
   const [assignFor, setAssignFor] = useState<{ variantId?: number }>()
+  const [confirmDelete, setConfirmDelete] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
   // Load once per id (not live), so background changes never wipe what the owner is typing.
@@ -324,7 +325,37 @@ export function ProductEdit({ id }: { id?: number }) {
         <Btn variant="ok" className="w-full py-4 text-2xl" disabled={saving} onClick={save}>
           {t('common.save')}
         </Btn>
+        {!isNew && (
+          <Btn variant="danger" className="w-full" onClick={() => setConfirmDelete(true)}>
+            🗑 {t('product.delete')}
+          </Btn>
+        )}
       </div>
+
+      {confirmDelete && id != null && (
+        <Modal onClose={() => setConfirmDelete(false)}>
+          <p className="mb-4 text-xl">{t('product.confirmDelete', { name: p.nameMy })}</p>
+          <div className="grid grid-cols-2 gap-3">
+            <Btn variant="plain" onClick={() => setConfirmDelete(false)}>
+              {t('common.cancel')}
+            </Btn>
+            <Btn
+              variant="danger"
+              onClick={async () => {
+                setConfirmDelete(false)
+                try {
+                  if (await deleteProduct(id)) go('#/products')
+                  else setError(t('product.cantDelete'))
+                } catch (e) {
+                  setError(String(e))
+                }
+              }}
+            >
+              {t('product.delete')}
+            </Btn>
+          </div>
+        </Modal>
+      )}
 
       {cutDraft && (
         <Modal onClose={() => setCutDraft(undefined)}>
