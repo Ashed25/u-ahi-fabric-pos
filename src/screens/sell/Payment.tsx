@@ -128,12 +128,17 @@ export function Payment({
             </div>
           ) : isCash ? (
             <>
-              <div className="rounded-2xl border-2 border-slate-300 p-4">
-                <div className="text-xl">{t('pay.received')}</div>
-                <div className="text-5xl font-bold" data-testid="tendered">
-                  {formatKs(tendered)}
-                </div>
-              </div>
+              <label className="block rounded-2xl border-2 border-slate-300 p-4">
+                <span className="text-xl">{t('pay.received')}</span>
+                <input
+                  className="w-full bg-transparent text-5xl font-bold outline-none"
+                  data-testid="tendered"
+                  inputMode="numeric"
+                  placeholder="0"
+                  value={tendered ? tendered.toLocaleString('en-US') : ''}
+                  onChange={(e) => setTendered(toInt(e.target.value) ?? 0)}
+                />
+              </label>
               <div className="grid grid-cols-2 gap-2">
                 {NOTES.map((n) => (
                   <Btn key={n} variant="plain" className="min-h-20 text-3xl" onClick={() => setTendered(tendered + n)}>
