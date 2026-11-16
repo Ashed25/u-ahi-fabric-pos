@@ -7,7 +7,7 @@ import { methodName } from '../../ui/format'
 import { Btn, toInt } from '../../ui/kit'
 import { useScanner } from '../../ui/useScanner'
 
-const NOTES = [1000, 5000, 10000, 20000]
+const NOTES = [50, 100, 200, 500, 1000, 5000, 10000, 20000]
 
 /** Cash with note buttons and a huge change figure; mobile/card with optional reference; split allowed. */
 export function Payment({
