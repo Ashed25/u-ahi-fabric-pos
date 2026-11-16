@@ -32,6 +32,20 @@
   .print-page {
     break-after: page;
   }
+  /* While a receipt is open, print only the receipt (80 mm wide, fits A4 too). */
+  body:has(> .receipt-print) > :not(.receipt-print) {
+    display: none !important;
+  }
+  .receipt-print {
+    display: block !important;
+    width: 80mm;
+    max-width: 100%;
+  }
+}
+@media screen {
+  .receipt-print {
+    display: none;
+  }
 }
 @media screen {
   .label-box {

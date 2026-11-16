@@ -180,7 +180,7 @@
   "pay.finish": "Done",
   "receipt.title": "Receipt",
   "receipt.show": "Show receipt",
-  "receipt.share": "Share (Viber/Messenger)",
+  "receipt.share": "Share (Viber/Messenger/printer app)",
   "receipt.copy": "COPY / မိတ္တူ",
   "receipt.no": "Receipt",
   "receipt.subtotal": "Subtotal",
@@ -474,5 +474,8 @@
   "cloud.connect": "Connect",
   "backup.reminder": "Last backup file was {{days}} days ago — save one today",
   "backup.reminderNever": "No backup file saved yet — save one today",
-  "home.guide": "How to sell (guide)"
+  "home.guide": "How to sell (guide)",
+  "receipt.print": "Print",
+  "receipt.save": "Save to this device",
+  "receipt.noPrint": "The print window didn’t open (installed apps on phones and tablets can’t print). Tap “Share” and send it to your receipt printer app, or “Save” and print the picture from the gallery."
 }

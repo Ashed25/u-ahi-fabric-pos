@@ -128,3 +128,56 @@ test('daily summary lists every product sold; the calendar picks a day', async (
   await page.getByLabel('date').fill(yesterday)
   await expect(page.getByText(/^အရောင်း 0 ခု/)).toBeVisible()
 })
+
+test('type the cash received by hand, small notes, then print / save / share the receipt', async ({ page }) => {
+  await scan(page, SHIRT_M) // 15,000
+  await page.getByRole('button', { name: 'ငွေရှင်းရန်' }).click()
+
+  // Typed by hand (Myanmar digits too), then topped up with the small note buttons
+  await page.getByTestId('tendered').fill('၁၅၀၀၀')
+  await expect(page.getByTestId('tendered')).toHaveValue('15,000')
+  await expect(page.getByTestId('change')).toHaveText('0')
+  await page.getByRole('button', { name: '+ 500', exact: true }).click()
+  await page.getByRole('button', { name: '+ 200', exact: true }).click()
+  await page.getByRole('button', { name: '+ 100', exact: true }).click()
+  await page.getByRole('button', { name: '+ 50', exact: true }).click()
+  await expect(page.getByTestId('tendered')).toHaveValue('15,850')
+  await expect(page.getByTestId('change')).toHaveText('850')
+  await page.getByTestId('tendered').fill('16000')
+  await expect(page.getByTestId('change')).toHaveText('1,000')
+  await page.getByRole('button', { name: /ပြီးပြီ/ }).click()
+  await expect(page.getByText('အရောင်း နံပါတ် A-000001')).toBeVisible()
+
+  // Receipt is on by default
+  await page.getByRole('button', { name: /ပြေစာ ပြရန်/ }).click()
+  const dialog = page.getByRole('dialog')
+  await expect(dialog.getByRole('img', { name: 'ပြေစာ' })).toBeVisible()
+  await expect(dialog.getByRole('button', { name: /ပို့ရန်/ })).toBeEnabled()
+
+  // Save: a PNG of this sale lands on the device
+  const [file] = await Promise.all([page.waitForEvent('download'), dialog.getByRole('button', { name: /သိမ်းရန်/ }).click()])
+  expect(file.suggestedFilename()).toBe('receipt-A-000001.png')
+  const png = await file.createReadStream()
+  const head: Buffer = await new Promise((res) => png.once('data', (b) => res(b as Buffer)))
+  expect(head.subarray(1, 4).toString()).toBe('PNG')
+
+  // Print: only the receipt goes to paper
+  await expect(dialog.getByRole('button', { name: /ပရင့်ထုတ်ရန်/ })).toBeEnabled()
+  await page.emulateMedia({ media: 'print' })
+  await expect(page.locator('img.receipt-print')).toBeVisible()
+  await expect(dialog).toBeHidden()
+  await page.emulateMedia({ media: 'screen' })
+  await expect(page.locator('img.receipt-print')).toBeHidden()
+
+  await dialog.getByRole('button', { name: 'ပိတ်ရန်' }).click()
+  await expect(page.locator('img.receipt-print')).toHaveCount(0)
+  await page.getByRole('button', { name: 'နောက်တစ်ယောက်' }).click()
+
+  // Reprint later from history (marked COPY)
+  await nav(page, '#/sales')
+  await page.getByRole('button', { name: /A-000001/ }).click()
+  await page.getByRole('button', { name: /ပြေစာ ပြရန်/ }).click()
+  await expect(page.getByRole('dialog').getByRole('img', { name: 'ပြေစာ' })).toBeVisible()
+  const [copy] = await Promise.all([page.waitForEvent('download'), page.getByRole('dialog').getByRole('button', { name: /သိမ်းရန်/ }).click()])
+  expect(copy.suggestedFilename()).toBe('receipt-A-000001.png')
+})

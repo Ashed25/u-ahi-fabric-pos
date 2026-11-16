@@ -13,7 +13,7 @@ Point of sale for a Myanmar clothing & fabric shop. It runs on an Android tablet
 | Selling | Scan anywhere; big total; Pay; Remove last; choose by photo / type a barcode / tablet camera; hold & resume; practice mode |
 | Fabric | Length built from any mix of units (“2 ကိုက် 1 ထွာ 1 မိုက်”), shown exactly as entered; price rounded per line to 50 Ks (setting); rolls, open-roll first, remnants (% off or one price) |
 | Payments | Cash notes with huge change, KBZPay / WavePay / AYA Pay / CB Pay / MPU / bank (configurable), split payments, transaction reference |
-| Records | Gap-free sale numbers per device (A-000001), never edited; returns via credit notes (CN-A-000001); exchanges with credit; voids keep their number; optional digital receipt shared as an image |
+| Records | Gap-free sale numbers per device (A-000001), never edited; returns via credit notes (CN-A-000001); exchanges with credit; voids keep their number; receipt to print, save to the device or share as an image (reprint from history, marked COPY) |
 | Stock | Clothes per size/colour, fabric per roll, receive, adjust with a reason, stock count / opening count, low-stock list |
 | Barcodes & labels | In-store EAN-13 (prefix 20), supplier codes by scanning, 40×30 / 50×30 thermal labels, A4 sticker sheets, roll labels, barcode book with photos |
 | Reports | Day / week / month / FY quarter / FY (Apr–Mar), profit from cost snapshots, best sellers (fabric in traditional units), by payment method and staff; CT report per quarter; CT registration warning at 80 % / 100 % of 50,000,000 Ks; Excel exports |
@@ -24,7 +24,7 @@ Point of sale for a Myanmar clothing & fabric shop. It runs on an Android tablet
 
 1. Open the app. It asks you to create the **owner**: name, 4-digit PIN, and password (at least 6 characters, for settings, users, import, backup and the audit log). **Write the password down**: there is no password reset.
 2. **Menu → 👥 Users:** add each person with their own PIN. Use **Seller** for the parents.
-3. **Menu → ⚙️ Settings:** shop address and phone, payment methods, rounding (default nearest 50 Ks for fabric lines), receipt (off by default), CT (off by default).
+3. **Menu → ⚙️ Settings:** shop address and phone, payment methods, rounding (default nearest 50 Ks for fabric lines), receipt (on by default), CT (off by default).
 4. Add products (below), print labels, do an opening stock count (**Menu → 📦 Stock → 📋 Stock count**).
 5. To try everything first, use **Menu → Load demo products** (owner). **Remove demo products** removes them again; demo sales stay in history.
 

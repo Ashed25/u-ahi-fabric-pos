@@ -30,7 +30,7 @@ export const DEFAULT_SETTINGS = {
   ] as PaymentMethod[],
   ct: { registered: false, rateBp: 500, inclusive: true } as CtSettings,
   ctThresholdKs: 50_000_000,
-  receiptEnabled: false,
+  receiptEnabled: true,
   receiptFooter: 'ဝယ်ယူအားပေးမှုအတွက် ကျေးဇူးတင်ပါသည်',
   returnPolicy: '',
   barcodePrefix: '20',
