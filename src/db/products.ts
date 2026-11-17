@@ -181,6 +181,30 @@ export async function importProducts(items: ParsedProduct[]): Promise<{ added: n
   })
 }
 
+/**
+ * Rows without product_id (a sheet kept outside the app) are matched to an existing product by type + name + category,
+ * and their sizes/colours by size + colour, so uploading the same sheet again updates instead of duplicating.
+ */
+export async function matchExisting(items: ParsedProduct[]): Promise<ParsedProduct[]> {
+  const [products, variants, categories] = await Promise.all([db.products.toArray(), db.variants.toArray(), db.categories.toArray()])
+  const catName = new Map(categories.map((c) => [c.id, c.nameMy.trim()]))
+  const sizeKey = (v: { size?: string; colour?: string }) => `${v.size?.trim() ?? ''}|${v.colour?.trim() ?? ''}`
+  return items.map((it) => {
+    const id = it.id ?? products.find((p) => p.kind === it.kind && p.nameMy.trim() === it.nameMy && (catName.get(p.categoryId) ?? '') === it.category)?.id
+    if (!id) return it
+    const free = variants.filter((v) => v.productId === id && !it.variants.some((x) => x.id === v.id))
+    return {
+      ...it,
+      id,
+      variants: it.variants.map((v) => {
+        if (v.id) return v
+        const i = free.findIndex((o) => sizeKey(o) === sizeKey(v))
+        return i < 0 ? v : { ...v, id: free.splice(i, 1)[0].id }
+      }),
+    }
+  })
+}
+
 /** Link a barcode from the sheet; already on this item = nothing to do; on another item = error. */
 async function linkCode(code: string, productId: number, variantId?: number) {
   const taken = await db.barcodes.get(code)

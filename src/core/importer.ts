@@ -5,7 +5,7 @@ import type { Unit } from './units'
  * Rows without product_id are new; rows with the same type + name + category become one product with variants.
  */
 export const IMPORT_COLUMNS = [
-  'product_id', // filled by "download products"; empty = new product
+  'product_id', // filled by "download products"; empty = matched by type + name + category (matchExisting), else new
   'variant_id', // piece only; empty = new size/colour
   'type', // piece / length  (or ခု / အလျား)
   'name_my',
@@ -111,7 +111,7 @@ export function parseImport(rows: Record<string, unknown>[], units: Unit[]): { p
     const product = { id, nameMy, nameEn: str(r.name_en), category, costKs: cost, wholesalePriceKs: wsPrice, wholesaleMin: wsMin, active }
 
     if (kind === 'length') {
-      if (existing) return err(`fabric "${nameMy}" appears twice`)
+      if (existing) return err(`fabric "${nameMy}" appears twice${id ? ' (copied row? clear its hidden product_id)' : ''}`)
       const unitName = str(r.pricing_unit)
       const unit = unitName ? units.find((u) => u.pricing && (u.code === unitName || u.nameMy === unitName)) : units.find((u) => u.code === 'gaik')
       if (!unit) return err(`unknown pricing_unit "${unitName}"`)
@@ -127,7 +127,7 @@ export function parseImport(rows: Record<string, unknown>[], units: Unit[]): { p
       return
     }
 
-    if (variantId && existing?.variants.some((v) => v.id === variantId)) return err(`variant_id ${variantId} appears twice`)
+    if (variantId && existing?.variants.some((v) => v.id === variantId)) return err(`variant_id ${variantId} appears twice (copied row? clear its hidden product_id and variant_id)`)
     const p = existing ?? { kind, ...product, priceKs: price, variants: [] }
     p.variants.push({
       id: variantId,

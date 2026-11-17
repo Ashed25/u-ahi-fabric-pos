@@ -6,15 +6,19 @@ import { formatInches, formatLargestFirst } from '../core/length'
 import { sellableRolls } from '../core/stock'
 import type { Unit } from '../core/units'
 import { audit } from '../db/audit'
-import { importProducts } from '../db/products'
+import { importProducts, matchExisting } from '../db/products'
 import { db } from '../db/schema'
 import { useSettings } from '../db/useSettings'
 import { Btn, Screen } from '../ui/kit'
 import { go } from '../ui/router'
 
 const STOCK_COL = 'stock_info' // read-only: not in IMPORT_COLUMNS, so ignored on upload
-const HEADER = [...IMPORT_COLUMNS, STOCK_COL]
-type Row = Partial<Record<(typeof HEADER)[number], string | number>>
+// App-filled columns go last and hidden: the owner edits details only; ids still come back so renames stay the same product.
+const HIDDEN = ['product_id', 'variant_id', STOCK_COL] as const
+type Col = (typeof IMPORT_COLUMNS)[number] | typeof STOCK_COL
+const DETAILS: Col[] = IMPORT_COLUMNS.filter((c) => !(HIDDEN as readonly string[]).includes(c))
+const HEADER: Col[] = [...DETAILS, ...HIDDEN]
+type Row = Partial<Record<Col, string | number>>
 
 const EXAMPLES: Row[] = [
   { type: 'piece', name_my: 'ရှပ်အင်္ကျီ အဖြူ', name_en: 'White shirt', category: 'အင်္ကျီ', price_ks: 15000, wholesale_price_ks: 12000, wholesale_min: 12, size: 'M', colour: 'အဖြူ', cost_ks: 9000 },
@@ -25,8 +29,9 @@ const EXAMPLES: Row[] = [
 
 const HELP = [
   ['column', 'ရှင်းလင်းချက်', 'Explanation'],
-  ['product_id', 'ပစ္စည်း နံပါတ် — "ပစ္စည်းအားလုံး ဒေါင်းလုဒ်" မှ ပါလာသည်။ မပြင်ပါနှင့်။ အလွတ် = ပစ္စည်းအသစ်', 'Filled in by "Download all products" — do not change it. Empty = new product'],
-  ['variant_id', 'အရွယ်/အရောင် နံပါတ် — မပြင်ပါနှင့်။ ပစ္စည်းဟောင်းတွင် အရွယ်အသစ် ထည့်ရန် product_id ကူးပြီး variant_id ကို အလွတ်ထားပါ', 'Size/colour number — do not change it. To add a new size to an existing product, copy its product_id and leave variant_id empty'],
+  ['product_id', 'ဖျောက်ထားသော ကော်လံ — app က ဖြည့်ပေးသည်။ ထိစရာ မလိုပါ။ မပါရင် type၊ အမည်၊ အမျိုးအစား တူသော ပစ္စည်းကို ပြင်မည် (မရှိရင် ပစ္စည်းအသစ်)', 'Hidden column, filled in by the app — leave it. Without it, the product with the same type, name and category is updated (new product if none)'],
+  ['variant_id', 'ဖျောက်ထားသော ကော်လံ — app က ဖြည့်ပေးသည်။ အရွယ်အသစ် ထည့်ရန် အမည်၊ အမျိုးအစား တူတူဖြင့် အကြောင်းအသစ် ရေးပါ', 'Hidden column, filled in by the app. To add a new size, add a row with the same name and category'],
+  ['', 'ပစ္စည်းအသစ်အတွက် အကြောင်းဟောင်းကို ကူးမည်ဆိုရင် Excel ၏ Insert ဖြင့် အကြောင်းအလွတ် ထည့်ပြီး စာများကိုသာ ကူးပါ (ဖျောက်ထားသော နံပါတ်များ မပါစေရန်)', 'To start a new product from an existing row, insert an empty row and copy the text cells only, so the hidden numbers are not copied'],
   ['type', 'piece = တစ်ထည်ချင်း ရောင်း / length = အလျားဖြင့် ရောင်း (ပိတ်စ)', 'piece = sold per piece, length = sold by length (fabric)'],
   ['name_my', 'အမည် (မြန်မာ) — မဖြစ်မနေ', 'Burmese name — required'],
   ['name_en', 'အမည် (အင်္ဂလိပ်) — မထည့်လည်းရ', 'English name — optional'],
@@ -46,17 +51,17 @@ const HELP = [
   ['', 'အကြောင်း ဖျက်လိုက်ရင် ပစ္စည်း မပျက်ပါ — ဖျောက်ရန် active = no ထားပါ', 'Deleting a row does not delete the product — set active = no to hide it'],
 ]
 
-function writeBook(rows: Row[], filename: string) {
+function writeBook(rows: Row[], filename: string, header = HEADER) {
   const wb = XLSX.utils.book_new()
-  const ws = XLSX.utils.json_to_sheet(rows, { header: HEADER })
-  ws['!cols'] = HEADER.map((h) => ({ wch: h === 'name_my' || h === 'name_en' ? 28 : 14 }))
+  const ws = XLSX.utils.json_to_sheet(rows, { header })
+  ws['!cols'] = header.map((h) => ({ wch: h === 'name_my' || h === 'name_en' ? 28 : 14, hidden: (HIDDEN as readonly string[]).includes(h) }))
   XLSX.utils.book_append_sheet(wb, ws, 'products')
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(HELP), 'help')
   XLSX.writeFile(wb, filename)
 }
 
 export function downloadTemplate() {
-  writeBook(EXAMPLES, 'u-ahi-products-template.xlsx')
+  writeBook(EXAMPLES, 'u-ahi-products-template.xlsx', DETAILS)
 }
 
 /** Every product as sheet rows (one per size/colour), ready to edit and upload again. */
@@ -105,7 +110,8 @@ export function Import() {
     try {
       const wb = XLSX.read(await file.arrayBuffer())
       const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(wb.Sheets[wb.SheetNames[0]], { defval: '' })
-      setParsed(parseImport(rows, settings.units))
+      const p = parseImport(rows, settings.units)
+      setParsed({ ...p, products: await matchExisting(p.products) })
     } catch (e) {
       setMsg({ ok: false, text: `${t('import.badFile')} (${String(e)})` })
     }
