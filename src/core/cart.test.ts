@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { addPiece, type CartLine, cartTotals, removeLast, setQty } from './cart'
+import { addPiece, applyWholesale, type CartLine, cartTotals, removeLast, setQty } from './cart'
 
 const shirt = { productId: 1, variantId: 10, nameMy: 'ရှပ်', sub: 'M', unitPriceKs: 15000 }
 const silk: CartLine = {
@@ -41,5 +41,26 @@ describe('cart', () => {
     const c = addPiece([], { ...shirt, unitPriceKs: 10500 })
     expect(cartTotals(c, { registered: true, rateBp: 500, inclusive: true })).toMatchObject({ ctKs: 500, totalKs: 10500 })
     expect(cartTotals(c, { registered: true, rateBp: 500, inclusive: false })).toMatchObject({ ctKs: 525, totalKs: 11025 })
+  })
+})
+
+describe('wholesale', () => {
+  const ws = { ...shirt, wholesaleKs: 12000, wholesaleMin: 3 }
+  const L = { ...shirt, variantId: 11, sub: 'L', wholesaleKs: 12000, wholesaleMin: 3 }
+  it('all sizes of a product count toward the minimum', () => {
+    let c = addPiece(addPiece([], ws), ws)
+    expect(applyWholesale(c, 50, 'nearest').every((l) => !l.wholesale)).toBe(true)
+    c = addPiece(c, L) // 2 M + 1 L = 3
+    const p = applyWholesale(c, 50, 'nearest')
+    expect(p.every((l) => l.wholesale && l.unitPriceKs === 12000)).toBe(true)
+    expect(cartTotals(p, NO_CT).totalKs).toBe(36000)
+    expect(applyWholesale(p, 50, 'nearest')).toEqual(p) // idempotent
+  })
+  it('fabric: total length vs minimum, rounded per line; remnants keep their price', () => {
+    const cut = { ...silk, wholesaleKs: 7000, wholesaleMin: 720 } as CartLine // 2 yd minimum
+    const p = applyWholesale([cut], 50, 'nearest') // 764 tenths ≥ 720
+    expect(p[0]).toMatchObject({ wholesale: true, unitPriceKs: 7000, lineTotalKs: 14850 }) // 7000 × 764/360 = 14855.6 → 14850
+    const remnant = { ...cut, remnantPct: 20 } as CartLine
+    expect(applyWholesale([remnant], 50, 'nearest')[0]).toBe(remnant)
   })
 })

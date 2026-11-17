@@ -2,12 +2,12 @@ import { useEffect, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useTranslation } from 'react-i18next'
 import { looksLikeMisread } from '../../core/barcode'
-import { addPiece, type CartLine, cartTotals, type LengthLine, lineTotal, removeLast, setQty } from '../../core/cart'
+import { addPiece, applyWholesale, type CartLine, cartTotals, type LengthLine, lineTotal, removeLast, setQty } from '../../core/cart'
 import { timeText } from '../../core/fy'
 import { formatEntered, formatInches } from '../../core/length'
 import { formatKs } from '../../core/money'
 import { assignBarcode, findByBarcode } from '../../db/products'
-import { completeSale, parkSale, resumeParked } from '../../db/sales'
+import { completeSale, parkSale, resumeParked, type SaleOptions } from '../../db/sales'
 import { type Product, type Variant, db } from '../../db/schema'
 import type { Settings } from '../../db/settings'
 import { useSettings } from '../../db/useSettings'
@@ -28,7 +28,7 @@ import { getPendingCredit, lengthLine, pieceItem, setPendingCredit, useStoredCar
 import { creditLeft, payOutCredit } from '../../db/returns'
 
 type Flash = { ok: boolean; text: string }
-type Done = { saleId: string; practice: boolean; totalKs: number; changeKs: number }
+type Done = { saleId: string; practice: boolean; totalKs: number; changeKs: number; owedKs: number; debtor?: string }
 /** Why the photo grid is open: to sell an item, or to link an unknown barcode to a product. */
 type GridMode = { kind: 'sell' } | { kind: 'assign'; code: string }
 
@@ -72,9 +72,11 @@ function SellScreen({ settings }: { settings: Settings }) {
   // Whole-sale discount: managers/owners only; % is rounded like fabric prices.
   const [discount, setDiscount] = useState<{ pct?: number; amountKs?: number; by: number }>()
   const [discountOpen, setDiscountOpen] = useState(false)
-  const subtotalKs = cartTotals(lines, settings.ct).subtotalKs
+  const priced = (ls: CartLine[]) => applyWholesale(ls, settings.roundStep, settings.roundMode)
+  const shown = priced(lines) // stored lines keep retail prices; wholesale is worked out from the whole cart
+  const subtotalKs = cartTotals(shown, settings.ct).subtotalKs
   const discountKs = !discount ? 0 : discount.pct ? roundFraction(subtotalKs * discount.pct, 100, settings.roundStep, 'nearest') : Math.min(discount.amountKs ?? 0, subtotalKs)
-  const totals = cartTotals(lines, settings.ct, discountKs)
+  const totals = cartTotals(shown, settings.ct, discountKs)
   useEffect(() => {
     if (!lines.length) setDiscount(undefined)
   }, [lines.length])
@@ -127,17 +129,21 @@ function SellScreen({ settings }: { settings: Settings }) {
     addProduct(p, v)
   }
 
-  async function finish(payments: Parameters<typeof completeSale>[1], creditBackKs: number) {
+  async function finish(payments: Parameters<typeof completeSale>[1], creditBackKs: number, debtor?: SaleOptions['debtor']) {
     const r = await completeSale(lines, payments, {
       creditPayout: creditCn && creditBackKs > 0 ? { cnId: creditCn, method: 'cash', amountKs: creditBackKs } : undefined,
       discountKs,
       discountBy: discount?.by,
+      debtor,
     })
     setDiscount(undefined)
     setPaying(false)
     setLines([])
     setFlash(undefined)
-    setDone({ saleId: r.sale.id, practice: r.practice, totalKs: r.sale.totalKs, changeKs: payments.reduce((s, p) => s + (p.changeKs ?? 0), 0) + creditBackKs })
+    setDone({
+      saleId: r.sale.id, practice: r.practice, totalKs: r.sale.totalKs, changeKs: payments.reduce((s, p) => s + (p.changeKs ?? 0), 0) + creditBackKs,
+      owedKs: r.sale.totalKs - payments.reduce((s, p) => s + p.amountKs, 0), debtor: debtor?.name.trim(),
+    })
   }
 
   // Back to a fresh sell screen by itself after a sale.
@@ -157,6 +163,12 @@ function SellScreen({ settings }: { settings: Settings }) {
         <div className="text-3xl">
           {t('pay.total')}: <b>{formatKs(done.totalKs)}</b> {t('common.ks')}
         </div>
+        {done.owedKs > 0 && (
+          <div className="rounded-3xl bg-amber-100 px-10 py-4 text-amber-900" data-testid="done-owed">
+            <div className="text-2xl">📒 {t('debt.owedBy', { name: done.debtor })}</div>
+            <div className="text-6xl font-bold">{formatKs(done.owedKs)}</div>
+          </div>
+        )}
         {done.changeKs > 0 && (
           <div className="rounded-3xl bg-white px-10 py-6 shadow">
             <div className="text-3xl">{t('pay.change')}</div>
@@ -248,7 +260,7 @@ function SellScreen({ settings }: { settings: Settings }) {
             {flash?.text ?? `▮▯▮ ${t('sell.scanHere')}`}
           </div>
           <ul className="mx-3 mb-3 flex-1 divide-y divide-slate-100 overflow-auto rounded-xl bg-white shadow-sm empty:shadow-none" data-testid="cart">
-            {lines.map((l) => (
+            {shown.map((l) => (
               <li key={l.key}>
                 <button className="flex w-full items-center gap-3 px-3 py-2 text-left active:bg-slate-50" onClick={() => setEditKey(l.key)}>
                   <Photo blob={photos?.get(l.productId)} className="h-12 w-12 shrink-0 rounded-lg lg:h-14 lg:w-14" />
@@ -257,11 +269,13 @@ function SellScreen({ settings }: { settings: Settings }) {
                     {l.kind === 'piece' ? (
                       <span className="block text-base text-slate-600">
                         {l.sub} {l.qty > 1 && <b>× {l.qty}</b>}
+                        {l.wholesale && <span className="ml-2 text-indigo-700">{t('wholesale.tag')}</span>}
                       </span>
                     ) : (
                       <span className="block text-base text-slate-600">
                         <b>{formatEntered(l.entered, settings.units, lang)}</b> <span className="text-sm">({formatInches(l.lengthTenths)}")</span>
                         {(l.remnantPct || l.wholeRemnant) && <span className="ml-2 text-amber-700">✂ {l.remnantPct ? `−${l.remnantPct}%` : t('stock.remnant')}</span>}
+                        {l.wholesale && <span className="ml-2 text-indigo-700">{t('wholesale.tag')}</span>}
                       </span>
                     )}
                   </span>
@@ -442,7 +456,7 @@ function SellScreen({ settings }: { settings: Settings }) {
                   <span>
                     {timeText(h.at)} · {t('sell.items', { count: cart.length })}
                   </span>
-                  <span className="text-2xl">{formatKs(cartTotals(cart, settings.ct).totalKs)}</span>
+                  <span className="text-2xl">{formatKs(cartTotals(priced(cart), settings.ct).totalKs)}</span>
                 </Btn>
               )
             })}

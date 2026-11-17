@@ -44,6 +44,8 @@ export interface Product {
   unitPriceKs?: number // length
   widthTenths?: number // length: display only
   quickCuts?: EnteredLength[] // length
+  wholesalePriceKs?: number // per piece, or per pricing unit for fabric
+  wholesaleMin?: number // pieces (all sizes/colours together), or pricing units for fabric
   tagged?: boolean // tagging day: label is on the item
   demo?: boolean // demo data, removable in one tap
   updatedAt: number
@@ -106,6 +108,8 @@ export interface Sale {
   discountKs: number
   ctKs: number
   totalKs: number
+  debtor?: string // set when the customer paid only part: who owes the rest
+  debtorPhone?: string
 }
 
 export interface SaleLine {
@@ -129,18 +133,20 @@ export interface SaleLine {
   remnantPct?: number
   wholeRemnant?: boolean
   costKs?: number // cost of this line at the time of sale (when the product has a cost)
+  wholesale?: boolean // sold at the wholesale price
 }
 
 /**
  * Money in for a sale (saleId = sale id), or money paid back on a credit note
  * (saleId = credit note id, negative amountKs, with `at`). Method 'credit' = paid with exchange credit (ref = credit note id).
+ * A positive payment WITH `at` was paid later against a debt (it counts on the day it was paid).
  */
 export interface Payment {
   id?: number
   saleId: string
   method: string
   amountKs: number
-  at?: number // payouts only
+  at?: number // payouts and later debt payments only
   ref?: string
   tenderedKs?: number
   changeKs?: number
@@ -232,6 +238,8 @@ export class PosDB extends Dexie {
     })
     // v2: find returns by sale
     this.version(2).stores({ creditLines: '++id, creditId, saleId, saleLineId' })
+    // v3: find partly-paid sales by who owes
+    this.version(3).stores({ sales: 'id, at, seq, userId, status, debtor' })
   }
 }
 

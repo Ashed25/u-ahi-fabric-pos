@@ -2,12 +2,13 @@ import type { CreditLine, CreditNote, Payment, Product, Sale, SaleLine } from '.
 import type { PeriodKind } from './period'
 import { yangonMidnight, yangonParts } from './fy'
 import { roundFraction } from './pricing'
+import { moneyIn } from './summary'
 
 /** Everything needed for one period. credit* hold the original sales/lines that returns refer to (may be older). */
 export interface ReportInput {
   sales: Sale[]
   lines: SaleLine[]
-  payments: Payment[] // payments of `sales` + payouts made in the period (negative, saleId = credit note id)
+  payments: Payment[] // payments made at sale time for `sales` + payments with `at` in the period (payouts, later debt payments)
   credits: CreditNote[]
   creditLines: CreditLine[]
   creditSales: Sale[]
@@ -26,6 +27,8 @@ export interface Report {
   netExCtKs: number // what the shop earned before CT
   byMethod: Record<string, number> // new money in per method ('credit' excluded)
   paidOutByMethod: Record<string, number>
+  debtKs: number // left unpaid on the period's sales
+  debtPaidKs: number // debts paid in the period (inside byMethod)
   byStaff: Record<number, { count: number; totalKs: number }>
   pieces: { productId: number; nameMy: string; qty: number; revenueKs: number }[]
   fabric: { productId: number; nameMy: string; tenths: number; revenueKs: number }[]
@@ -51,7 +54,7 @@ export function buildReport(d: ReportInput): Report {
     count: done.length,
     voidCount: d.sales.length - done.length,
     grossKs: 0, ctKs: 0, refundsKs: 0, refundsCtKs: 0, netKs: 0, netExCtKs: 0,
-    byMethod: {}, paidOutByMethod: {}, byStaff: {}, pieces: [], fabric: [],
+    ...moneyIn(done, d.payments), byStaff: {}, pieces: [], fabric: [],
     profit: { revenueKs: 0, costKs: 0, profitKs: 0, uncostedRevenueKs: 0 },
   }
   for (const s of done) {
@@ -61,10 +64,7 @@ export function buildReport(d: ReportInput): Report {
     st.count++
     st.totalKs += s.totalKs
   }
-  for (const p of d.payments) {
-    if (p.amountKs < 0) r.paidOutByMethod[p.method] = (r.paidOutByMethod[p.method] ?? 0) - p.amountKs
-    else if (byId.has(p.saleId) && p.method !== 'credit') r.byMethod[p.method] = (r.byMethod[p.method] ?? 0) + p.amountKs
-  }
+
 
   const pieces = new Map<number, Report['pieces'][number]>()
   const fabric = new Map<number, Report['fabric'][number]>()

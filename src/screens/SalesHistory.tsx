@@ -41,6 +41,7 @@ export function SalesHistory() {
   const method = (code: string) => methodName(t, settings.paymentMethods, code, i18n.language)
   const completed = data.sales.filter((s) => s.status === 'completed')
   const total = completed.reduce((s, x) => s + x.totalKs, 0)
+  const owed = (s: Sale) => s.totalKs - data.pays.filter((p) => p.saleId === s.id).reduce((a, p) => a + p.amountKs, 0)
 
   return (
     <Screen title={t('history.title')} back="#/menu">
@@ -60,6 +61,11 @@ export function SalesHistory() {
                   {[...new Set(data.pays.filter((p) => p.saleId === s.id).map((p) => method(p.method)))].join(' · ')}
                 </span>
                 {s.status === 'void' && <span className="rounded bg-red-100 px-2 text-red-800">VOID</span>}
+                {s.status === 'completed' && s.debtor && owed(s) > 0 && (
+                  <span className="rounded bg-amber-100 px-2 text-amber-900">
+                    📒 {s.debtor} {formatKs(owed(s))}
+                  </span>
+                )}
                 <span className="text-2xl font-bold">{formatKs(s.totalKs)}</span>
               </button>
             </li>
@@ -88,6 +94,7 @@ export function SaleView({ id }: { id: string }) {
   if (!settings || d === undefined) return null
 
   const { sale, lines, payments, credits, payouts } = d
+  const owedKs = sale.totalKs - payments.reduce((s, p) => s + p.amountKs, 0)
   async function doVoid() {
     if (!voidReason.trim()) return setError(t('return.errReason'))
     const approver = await approve('manager')
@@ -121,6 +128,7 @@ export function SaleView({ id }: { id: string }) {
                   ) : (
                     `${l.sub ? `${l.sub} · ` : ''}${l.qty} × ${formatKs(l.unitPriceKs)}`
                   )}
+                  {l.wholesale && <span className="ml-2 text-indigo-700">{t('wholesale.tag')}</span>}
                 </span>
               </span>
               <span className="text-2xl font-bold">{formatKs(l.lineTotalKs)}</span>
@@ -142,6 +150,7 @@ export function SaleView({ id }: { id: string }) {
             <p key={p.id} className="flex justify-between">
               <span>
                 {method(p.method)} {p.ref && <span className="text-base text-slate-600">#{p.ref}</span>}
+                {p.at && <span className="text-base text-slate-600"> · {dateKey(p.at)} {timeText(p.at)}</span>}
               </span>
               <span>
                 {formatKs(p.amountKs)}
@@ -149,6 +158,14 @@ export function SaleView({ id }: { id: string }) {
               </span>
             </p>
           ))}
+          {sale.debtor && (
+            <button className="flex w-full justify-between rounded-xl bg-amber-100 p-3 text-left text-2xl font-bold text-amber-900" onClick={() => go('#/debts')} data-testid="sale-owed">
+              <span>
+                📒 {sale.debtor} {sale.debtorPhone && <span className="text-lg font-normal">{sale.debtorPhone}</span>}
+              </span>
+              <span>{owedKs > 0 ? `${t('debt.owed')} ${formatKs(owedKs)}` : `✓ ${t('debt.paidOff')}`}</span>
+            </button>
+          )}
         </div>
         {credits.length > 0 && (
           <section className="rounded-2xl bg-violet-50 p-4">

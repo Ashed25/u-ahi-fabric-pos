@@ -6,6 +6,7 @@ import { DEFAULT_QUICK_CUTS, deleteProduct, removeBarcode, saveProduct } from '.
 import { type Barcode, type Product, type Variant, db } from '../db/schema'
 import { useSettings } from '../db/useSettings'
 import { BarcodeSvg } from '../ui/BarcodeSvg'
+import { unitName } from '../ui/format'
 import { LengthBuilder } from '../ui/LengthBuilder'
 import { ScanAssign } from '../ui/ScanAssign'
 import { Btn, Field, Modal, Screen, inputCls, toInt } from '../ui/kit'
@@ -39,6 +40,8 @@ export function ProductEdit({ id }: { id?: number }) {
   const [price, setPrice] = useState('')
   const [cost, setCost] = useState('')
   const [low, setLow] = useState('')
+  const [wsPrice, setWsPrice] = useState('')
+  const [wsMin, setWsMin] = useState('')
   const [vPrices, setVPrices] = useState<string[]>([])
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
@@ -59,6 +62,8 @@ export function ProductEdit({ id }: { id?: number }) {
       setVariants(vs)
       setPrice(numStr(prod.kind === 'piece' ? prod.priceKs : prod.unitPriceKs))
       setCost(numStr(prod.costKs))
+      setWsPrice(numStr(prod.wholesalePriceKs))
+      setWsMin(numStr(prod.wholesaleMin))
       setLow(numStr(prod.lowStock == null ? undefined : prod.kind === 'length' ? prod.lowStock / YARD : prod.lowStock))
       setVPrices(vs.map((v) => numStr(v.priceKs)))
     })()
@@ -78,6 +83,9 @@ export function ProductEdit({ id }: { id?: number }) {
     if (!priceKs) return setError(t('product.errPrice'))
     if (cost && toInt(cost) === undefined) return setError(t('product.errCost'))
     if (low && toInt(low) === undefined) return setError(t('product.errLow'))
+    const wholesalePriceKs = wsPrice ? toInt(wsPrice) : undefined
+    const wholesaleMin = wsMin ? toInt(wsMin) : undefined
+    if (!!wsPrice !== !!wholesalePriceKs || !!wsMin !== !!wholesaleMin || !wholesalePriceKs !== !wholesaleMin) return setError(t('wholesale.err'))
     const vp = vPrices.map((s) => (s ? toInt(s) : undefined))
     if (vPrices.some((s, i) => s && vp[i] === undefined)) return setError(t('product.errPrice'))
     const lowN = toInt(low)
@@ -86,6 +94,8 @@ export function ProductEdit({ id }: { id?: number }) {
       nameMy: p.nameMy.trim(),
       nameEn: p.nameEn.trim(),
       costKs: toInt(cost),
+      wholesalePriceKs,
+      wholesaleMin,
       lowStock: lowN == null ? undefined : p.kind === 'length' ? lowN * YARD : lowN,
       ...(p.kind === 'piece' ? { priceKs } : { unitPriceKs: priceKs }),
     }
@@ -310,6 +320,18 @@ export function ProductEdit({ id }: { id?: number }) {
             </Field>
           </>
         )}
+
+        <Section title={t('wholesale.title')}>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label={t(p.kind === 'piece' ? 'wholesale.price' : 'wholesale.pricePerUnit')}>
+              <input className={inputCls} inputMode="numeric" value={wsPrice} onChange={(e) => setWsPrice(e.target.value)} data-testid="ws-price" />
+            </Field>
+            <Field label={p.kind === 'piece' ? t('wholesale.minPieces') : t('wholesale.minUnits', { unit: unitName(settings.units, p.pricingUnit ?? 'gaik', lang) })}>
+              <input className={inputCls} inputMode="numeric" value={wsMin} onChange={(e) => setWsMin(e.target.value)} data-testid="ws-min" />
+            </Field>
+          </div>
+          <p className="mt-1 text-base text-slate-600">{t(p.kind === 'piece' ? 'wholesale.hintPieces' : 'wholesale.hintLength')}</p>
+        </Section>
 
         <Field label={t('product.cost')} hint={t('product.costHint')}>
           <input className={inputCls} inputMode="numeric" value={cost} onChange={(e) => setCost(e.target.value)} />

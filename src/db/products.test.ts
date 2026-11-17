@@ -61,8 +61,8 @@ describe('products & barcodes', () => {
     await assignBarcode('11112222', fid)
     await expect(
       importProducts([
-        { kind: 'length', nameMy: 'X', nameEn: '', category: 'ပိုး', pricingUnit: 'gaik', unitPriceKs: 1000, variants: [] },
-        { kind: 'piece', nameMy: 'Y', nameEn: '', category: '', priceKs: 1000, variants: [{ barcode: '11112222' }] },
+        { kind: 'length', nameMy: 'X', nameEn: '', active: true, category: 'ပိုး', pricingUnit: 'gaik', unitPriceKs: 1000, variants: [] },
+        { kind: 'piece', nameMy: 'Y', nameEn: '', active: true, category: '', priceKs: 1000, variants: [{ barcode: '11112222' }] },
       ]),
     ).rejects.toThrow(/already in use/)
     expect(await db.products.count()).toBe(1)
@@ -70,7 +70,7 @@ describe('products & barcodes', () => {
 
   it('import creates categories and barcodes', async () => {
     await importProducts([
-      { kind: 'piece', nameMy: 'Y', nameEn: '', category: 'အင်္ကျီ', priceKs: 1000, variants: [{ size: 'M' }, { size: 'L', barcode: '99998888' }] },
+      { kind: 'piece', nameMy: 'Y', nameEn: '', active: true, category: 'အင်္ကျီ', priceKs: 1000, variants: [{ size: 'M' }, { size: 'L', barcode: '99998888' }] },
     ])
     expect(await db.categories.count()).toBe(1)
     const codes = await db.barcodes.toArray()
@@ -99,5 +99,26 @@ describe('products & barcodes', () => {
     expect(await deleteCategory(used)).toBe(false)
     expect(await deleteCategory(empty)).toBe(true)
     expect((await db.categories.toArray()).map((c) => c.nameMy)).toEqual(['A'])
+  })
+})
+
+describe('Excel update', () => {
+  it('updates details by id, keeps stock and photo, adds a new size, all-or-nothing on bad ids', async () => {
+    const pid = await saveProduct(shirt, [{ productId: 0, size: 'M', qty: 4 }])
+    const [m] = await db.variants.where('productId').equals(pid).toArray()
+    const r = await importProducts([
+      { id: pid, kind: 'piece', nameMy: 'ရှပ် ၂', nameEn: '', category: '', priceKs: 16000, wholesalePriceKs: 13000, wholesaleMin: 10, active: true, variants: [{ id: m.id, size: 'M' }, { size: 'XL', barcode: '55556666' }] },
+      { kind: 'length', nameMy: 'new', nameEn: '', category: '', pricingUnit: 'gaik', unitPriceKs: 1000, active: false, variants: [] },
+    ])
+    expect(r).toEqual({ added: 1, updated: 1 })
+    expect(await db.products.get(pid)).toMatchObject({ nameMy: 'ရှပ် ၂', priceKs: 16000, wholesalePriceKs: 13000, wholesaleMin: 10 })
+    const vs = await db.variants.where('productId').equals(pid).toArray()
+    expect(vs.map((v) => [v.size, v.qty])).toEqual([['M', 4], ['XL', 0]])
+    expect((await findByBarcode('55556666'))?.variant?.size).toBe('XL')
+    expect((await db.products.where('kind').equals('length').first())?.active).toBe(false)
+
+    await expect(importProducts([{ id: 999, kind: 'piece', nameMy: 'x', nameEn: '', category: '', priceKs: 1, active: true, variants: [] }])).rejects.toThrow(/not in this shop/)
+    await expect(importProducts([{ id: pid, kind: 'length', nameMy: 'x', nameEn: '', category: '', unitPriceKs: 1, active: true, variants: [] }])).rejects.toThrow(/type cannot change/)
+    expect(await db.products.count()).toBe(2)
   })
 })

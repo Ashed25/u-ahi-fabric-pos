@@ -10,7 +10,7 @@ import { db } from '../db/schema'
 import { useSettings } from '../db/useSettings'
 import { methodName } from '../ui/format'
 import { Btn, DayPicker, Screen, inputCls, toInt } from '../ui/kit'
-import { CtWarning } from './Reports'
+import { CtWarning, DebtLines } from './Reports'
 
 const DAY = 86_400_000
 
@@ -20,9 +20,9 @@ async function loadDay(ms: number) {
   const ids = sales.map((s) => s.id)
   const [lines, salePays, credits, payouts] = await Promise.all([
     db.saleLines.where('saleId').anyOf(ids).toArray(),
-    db.payments.where('saleId').anyOf(ids).toArray(),
+    db.payments.where('saleId').anyOf(ids).filter((p) => p.at == null).toArray(),
     db.creditNotes.where('at').between(from, to, true, false).toArray(),
-    db.payments.filter((p) => p.amountKs < 0 && p.at != null && p.at >= from && p.at < to).toArray(),
+    db.payments.filter((p) => p.at != null && p.at >= from && p.at < to).toArray(), // payouts and later debt payments
   ])
   return summarize(sales, lines, [...salePays, ...payouts], credits)
 }
@@ -71,6 +71,7 @@ export function Today() {
               .map(([m, v]) => `${name(m)} ${formatKs(v)}`)
               .join(' · ') || '—'}
           </div>
+          <DebtLines debtKs={s.debtKs} debtPaidKs={s.debtPaidKs} className="text-slate-200" />
         </div>
 
         <div className="grid grid-cols-2 gap-3">

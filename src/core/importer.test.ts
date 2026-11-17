@@ -48,3 +48,27 @@ describe('Excel import parser', () => {
     expect(errors.map((e) => e.row)).toEqual([4, 5, 6, 7, 8, 9, 11])
   })
 })
+
+describe('Excel update sheet', () => {
+  it('rows with product_id update that product; wholesale and active are read', () => {
+    const { products, errors } = parse([
+      { product_id: 7, variant_id: 70, type: 'piece', name_my: 'ရှပ်', price_ks: 15000, wholesale_price_ks: 12000, wholesale_min: 12, size: 'M', active: 'no', stock_info: 99 },
+      { product_id: 7, variant_id: '', type: 'piece', name_my: 'ရှပ်', price_ks: 15000, wholesale_price_ks: 12000, wholesale_min: 12, size: 'XL' },
+      { product_id: 8, type: 'length', name_my: 'ပိုး', price_ks: 8000 },
+    ])
+    expect(errors).toEqual([])
+    expect(products[0]).toMatchObject({ id: 7, active: false, wholesalePriceKs: 12000, wholesaleMin: 12 })
+    expect(products[0].variants.map((v) => [v.id, v.size])).toEqual([[70, 'M'], [undefined, 'XL']])
+    expect(products[1]).toMatchObject({ id: 8, kind: 'length', active: true })
+  })
+  it('reports bad ids and half-filled wholesale', () => {
+    const { errors } = parse([
+      { product_id: 'x', type: 'piece', name_my: 'A', price_ks: 1 },
+      { variant_id: 3, type: 'piece', name_my: 'B', price_ks: 1 },
+      { type: 'piece', name_my: 'C', price_ks: 1, wholesale_price_ks: 900 },
+      { product_id: 5, variant_id: 9, type: 'piece', name_my: 'D', price_ks: 1 },
+      { product_id: 5, variant_id: 9, type: 'piece', name_my: 'D', price_ks: 1 },
+    ])
+    expect(errors.map((e) => e.row)).toEqual([2, 3, 4, 6])
+  })
+})

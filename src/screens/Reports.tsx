@@ -16,6 +16,18 @@ import { exportAll, exportReport } from '../ui/xlsx'
 
 const KINDS: PeriodKind[] = ['day', 'week', 'month', 'quarter', 'fy']
 
+/** Money left owing on the period's sales, and debts paid in it (already counted in the methods above). Taps through to the debts list. */
+export function DebtLines({ debtKs, debtPaidKs, className = 'text-amber-800' }: { debtKs: number; debtPaidKs: number; className?: string }) {
+  const { t } = useTranslation()
+  if (!debtKs && !debtPaidKs) return null
+  return (
+    <button className={`mt-1 block w-full text-left text-base underline-offset-2 hover:underline ${className}`} onClick={() => go('#/debts')} data-testid="debt-lines">
+      {debtKs > 0 && <span className="mr-4">📒 {t('debt.newDebt')}: {formatKs(debtKs)}</span>}
+      {debtPaidKs > 0 && <span>{t('debt.collected')}: {formatKs(debtPaidKs)}</span>}
+    </button>
+  )
+}
+
 /** Shown on the menu, daily summary and reports when yearly sales near the CT registration threshold. */
 export function CtWarning({ always = false }: { always?: boolean }) {
   const { t } = useTranslation()
@@ -146,6 +158,7 @@ export function Reports() {
                   <span>−{formatKs(v)}</span>
                 </p>
               ))}
+              <DebtLines debtKs={r.debtKs} debtPaidKs={r.debtPaidKs} />
             </Card>
             <Card title={t('reports.byStaff')}>
               <RankList

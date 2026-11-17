@@ -1,4 +1,4 @@
-import { type CartLine, cartTotals } from '../core/cart'
+import { type CartLine, applyWholesale, cartTotals } from '../core/cart'
 import { roundFraction } from '../core/pricing'
 import { defaultRoll, sellableRolls } from '../core/stock'
 import { creditLeft } from './returns'
@@ -25,13 +25,15 @@ export interface SaleOptions {
   creditPayout?: { cnId: string; method: string; amountKs: number }
   discountKs?: number // whole-sale discount, manager/owner only
   discountBy?: number // the manager/owner who approved it
+  debtor?: { name: string; phone?: string } // customer pays only part now; the rest is owed under this name
 }
 
-export async function completeSale(lines: CartLine[], payments: PaymentInput[], { creditPayout, discountKs = 0, discountBy }: SaleOptions = {}): Promise<CompleteResult> {
+export async function completeSale(cart: CartLine[], payments: PaymentInput[], { creditPayout, discountKs = 0, discountBy, debtor }: SaleOptions = {}): Promise<CompleteResult> {
   if (discountKs) await requireRole('manager', discountBy)
   const userId = currentUserId()
   return db.transaction('rw', [db.sales, db.saleLines, db.payments, db.settings, db.variants, db.rolls, db.stockMoves, db.creditNotes, db.products], async () => {
-    if (!lines.length) throw new Error('Empty sale')
+    if (!cart.length) throw new Error('Empty sale')
+    const lines = applyWholesale(cart, await getSetting('roundStep'), await getSetting('roundMode'))
     const ct = await getSetting('ct')
     if (!Number.isSafeInteger(discountKs) || discountKs < 0) throw new Error('Bad discount')
     const totals = cartTotals(lines, ct, discountKs)
@@ -41,7 +43,9 @@ export async function completeSale(lines: CartLine[], payments: PaymentInput[], 
       if (p.changeKs && p.method !== 'cash') throw new Error('Change can only be given in cash')
     }
     const paid = payments.reduce((s, p) => s + p.amountKs, 0)
-    if (paid !== totals.totalKs) throw new Error(`Payments ${paid} ≠ total ${totals.totalKs}`)
+    if (paid > totals.totalKs) throw new Error(`Payments ${paid} > total ${totals.totalKs}`)
+    const debtorName = debtor?.name.trim()
+    if (paid < totals.totalKs && !debtorName) throw new Error(`Payments ${paid} ≠ total ${totals.totalKs}`)
     for (const p of payments.filter((x) => x.method === 'credit')) {
       const use = p.amountKs + (creditPayout && creditPayout.cnId === p.ref ? creditPayout.amountKs : 0)
       if (!p.ref || use > (await creditLeft(p.ref))) throw new Error('Not enough exchange credit')
@@ -52,6 +56,7 @@ export async function completeSale(lines: CartLine[], payments: PaymentInput[], 
     const seq = (await getSetting('saleSeq')) + 1
     const now = Date.now()
     const sale: Sale = { id: practice ? 'PRACTICE' : saleNo(prefix, seq), deviceId: prefix, seq, at: now, userId, status: 'completed', ...totals }
+    if (paid < totals.totalKs) Object.assign(sale, { debtor: debtorName, debtorPhone: debtor?.phone?.trim() || undefined })
     if (practice) return { sale, practice }
 
     await db.sales.add(sale)
@@ -61,6 +66,7 @@ export async function completeSale(lines: CartLine[], payments: PaymentInput[], 
         l.kind === 'piece'
           ? { saleId: sale.id, productId: l.productId, variantId: l.variantId, kind: 'piece', qty: l.qty, nameMy: l.nameMy, sub: l.sub || undefined, unitPriceKs: l.unitPriceKs, ctRateBp, lineTotalKs: l.unitPriceKs * l.qty }
           : { saleId: sale.id, productId: l.productId, kind: 'length', entered: l.entered, lengthTenths: l.lengthTenths, nameMy: l.nameMy, sub: l.sub || undefined, unitPriceKs: l.unitPriceKs, pricingUnit: l.pricingUnit, unitTenths: l.unitTenths, ctRateBp, lineTotalKs: l.lineTotalKs, remnantPct: l.remnantPct, wholeRemnant: l.wholeRemnant }
+      if (l.wholesale) row.wholesale = true
       // Cost snapshot for profit reports: per piece, or per pricing unit for fabric.
       const cost = (await db.products.get(l.productId))?.costKs
       if (cost != null) row.costKs = l.kind === 'piece' ? cost * l.qty : roundFraction(cost * l.lengthTenths, l.unitTenths, 1, 'nearest')

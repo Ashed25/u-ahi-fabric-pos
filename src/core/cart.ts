@@ -1,4 +1,5 @@
 import type { EnteredLength } from './length'
+import { type RoundMode, fabricLinePrice } from './pricing'
 import { type CtSettings, applyCt } from './tax'
 
 export interface PieceLine {
@@ -10,6 +11,9 @@ export interface PieceLine {
   sub: string // size · colour
   unitPriceKs: number
   qty: number
+  wholesaleKs?: number // product's wholesale price, copied when added
+  wholesaleMin?: number // pieces, all sizes/colours together
+  wholesale?: boolean // set by applyWholesale
 }
 
 export interface LengthLine {
@@ -27,6 +31,9 @@ export interface LengthLine {
   rollId?: number // roll the seller cut from (default: the open roll)
   remnantPct?: number // remnant sold at % off
   wholeRemnant?: boolean // remnant sold whole at its fixed price
+  wholesaleKs?: number // per pricing unit
+  wholesaleMin?: number // tenths of an inch, all cuts of the product together
+  wholesale?: boolean // set by applyWholesale
 }
 
 export type CartLine = PieceLine | LengthLine
@@ -43,6 +50,24 @@ export function addPiece(lines: CartLine[], item: Omit<PieceLine, 'key' | 'kind'
   // Move it to the end so "remove last" removes what was just scanned.
   const line = lines[i] as PieceLine
   return [...lines.filter((_, j) => j !== i), { ...line, qty: line.qty + 1 }]
+}
+
+/**
+ * Wholesale: when the cart holds at least the minimum of a product (all sizes/colours added up,
+ * or the total length cut), every line of it is priced at the wholesale price. Remnants keep their own price.
+ * Lines keep their retail price in the stored cart; call this to price them.
+ */
+export function applyWholesale(lines: CartLine[], step: number, mode: RoundMode): CartLine[] {
+  const eligible = (l: CartLine) => !!l.wholesaleKs && !!l.wholesaleMin && !(l.kind === 'length' && (l.remnantPct || l.wholeRemnant))
+  const amount = new Map<number, number>()
+  for (const l of lines.filter(eligible)) amount.set(l.productId, (amount.get(l.productId) ?? 0) + (l.kind === 'piece' ? l.qty : l.lengthTenths))
+  return lines.map((l) => {
+    if (!eligible(l) || amount.get(l.productId)! < l.wholesaleMin!) return l
+    const unitPriceKs = l.wholesaleKs!
+    return l.kind === 'piece'
+      ? { ...l, unitPriceKs, wholesale: true }
+      : { ...l, unitPriceKs, lineTotalKs: fabricLinePrice(unitPriceKs, l.lengthTenths, l.unitTenths, step, mode), wholesale: true }
+  })
 }
 
 /** "Remove last item": one piece off the last line, or the whole last fabric cut. */

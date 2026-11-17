@@ -26,7 +26,7 @@ export function Return({ saleId }: { saleId: string }) {
   const [reason, setReason] = useState('')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
-  const [refunded, setRefunded] = useState<{ id: string; totalKs: number }>()
+  const [refunded, setRefunded] = useState<{ id: string; totalKs: number; toDebtKs: number }>()
   if (!settings || !data?.d) return null
   const { sale, lines } = data.d
 
@@ -62,8 +62,9 @@ export function Return({ saleId }: { saleId: string }) {
       <Screen title={t('return.title')} back={`#/sales/${saleId}`}>
         <div className="mx-auto max-w-2xl space-y-4 text-center">
           <p className="text-4xl font-bold text-green-800">✓ {t('return.done', { id: refunded.id })}</p>
+          {refunded.toDebtKs > 0 && <p className="rounded-xl bg-amber-100 p-3 text-2xl">{t('debt.offDebt', { amount: formatKs(refunded.toDebtKs) })}</p>}
           <p className="text-3xl">{t('return.giveBack')}</p>
-          <p className="text-8xl font-bold">{formatKs(refunded.totalKs)}</p>
+          <p className="text-8xl font-bold">{formatKs(refunded.totalKs - refunded.toDebtKs)}</p>
           <Btn variant="ok" className="min-h-20 px-10" onClick={() => go(`#/sales/${saleId}`)}>
             {t('common.done')}
           </Btn>

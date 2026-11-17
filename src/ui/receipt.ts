@@ -23,11 +23,11 @@ export function receiptRows(t: TFunction, lang: string, s: Settings, d: { sale: 
   for (const l of d.lines) {
     if (l.kind === 'length') {
       rows.push({ left: l.nameMy, right: ks(l.lineTotalKs), bold: true })
-      const remnant = l.wholeRemnant ? ` ✂ ${t('stock.remnant')}` : l.remnantPct ? ` ✂ −${l.remnantPct}%` : ''
+      const remnant = (l.wholeRemnant ? ` ✂ ${t('stock.remnant')}` : l.remnantPct ? ` ✂ −${l.remnantPct}%` : '') + (l.wholesale ? ` · ${t('wholesale.tag')}` : '')
       rows.push({ left: `  ${formatEntered(l.entered ?? [], s.units, lang as 'my' | 'en')} (${formatInches(l.lengthTenths ?? 0)}") @ ${ks(l.unitPriceKs)}/${unitName(s.units, l.pricingUnit ?? 'gaik', lang)}${remnant}`, small: true })
     } else {
       rows.push({ left: l.nameMy, right: ks(l.lineTotalKs), bold: true })
-      const detail = [l.sub, (l.qty ?? 1) > 1 ? `${l.qty} × ${ks(l.unitPriceKs)}` : ''].filter(Boolean).join(' · ')
+      const detail = [l.sub, (l.qty ?? 1) > 1 ? `${l.qty} × ${ks(l.unitPriceKs)}` : '', l.wholesale ? t('wholesale.tag') : ''].filter(Boolean).join(' · ')
       if (detail) rows.push({ left: `  ${detail}`, small: true })
     }
   }
@@ -37,8 +37,15 @@ export function receiptRows(t: TFunction, lang: string, s: Settings, d: { sale: 
   if (d.sale.ctKs) rows.push({ left: t('receipt.ct'), right: ks(d.sale.ctKs) })
   rows.push({ left: t('receipt.total'), right: `${ks(d.sale.totalKs)} ${t('common.ks')}`, bold: true, size: 32 })
   for (const p of d.payments) {
-    rows.push({ left: `${methodName(t, s.paymentMethods, p.method, lang)}${p.ref ? ` #${p.ref}` : ''}`, right: ks(p.tenderedKs ?? p.amountKs) })
+    // Later debt payments show their date; a return that cancelled debt shows as exchange credit with the credit note number.
+    const when = p.at ? ` (${dateKey(p.at)})` : ''
+    rows.push({ left: `${methodName(t, s.paymentMethods, p.method, lang)}${p.ref ? ` #${p.ref}` : ''}${when}`, right: ks(p.tenderedKs ?? p.amountKs) })
     if (p.changeKs) rows.push({ left: t('pay.change'), right: ks(p.changeKs) })
+  }
+  if (d.sale.debtor) {
+    const owed = d.sale.totalKs - d.payments.reduce((a, p) => a + p.amountKs, 0)
+    rows.push({ left: `${t('debt.name')}: ${d.sale.debtor}${d.sale.debtorPhone ? ` · ${d.sale.debtorPhone}` : ''}` })
+    rows.push(owed > 0 ? { left: t('debt.owed'), right: `${ks(owed)} ${t('common.ks')}`, bold: true, size: 30 } : { left: `✓ ${t('debt.paidOff')}`, bold: true })
   }
   rows.push({ left: '', rule: true })
   if (s.returnPolicy) rows.push({ left: s.returnPolicy, center: true, small: true })

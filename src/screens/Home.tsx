@@ -15,6 +15,7 @@ import { SyncBadge } from '../sync/runner'
 const TILES = [
   ['today', '📊', 'today.title'],
   ['sales', '🧾', 'history.title'],
+  ['debts', '📒', 'debt.title'],
   ['reports', '📈', 'reports.title'],
   ['stock', '📦', 'stock.title'],
   ['products', '👕', 'products.title'],

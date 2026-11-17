@@ -1,5 +1,6 @@
 import { roundFraction } from '../core/pricing'
 import { audit } from './audit'
+import { owingOn } from './debts'
 import { type CreditLine, type CreditNote, type Sale, type SaleLine, db } from './schema'
 import { getSetting, setSetting } from './settings'
 import { currentUserId, requireRole } from './users'
@@ -48,8 +49,9 @@ async function putBack(l: SaleLine, qty: number, toRoll: boolean, at: number, us
 /**
  * Return goods against a completed sale. Creates a numbered credit note (never edits the sale),
  * puts stock back, and for a refund records the money paid back. An exchange keeps the value as credit.
+ * If the customer still owes on the sale, the returned value first cancels that debt (toDebtKs); only the rest is refunded / credited.
  */
-export async function createReturn(o: { saleId: string; items: ReturnItem[]; type: CreditNote['type']; reason: string; refundMethod?: string; approvedBy?: number }): Promise<CreditNote> {
+export async function createReturn(o: { saleId: string; items: ReturnItem[]; type: CreditNote['type']; reason: string; refundMethod?: string; approvedBy?: number }): Promise<CreditNote & { toDebtKs: number }> {
   await requireRole('manager', o.approvedBy) // a seller needs a manager to enter their PIN
   return db.transaction('rw', TABLES(), async () => {
     const userId = currentUserId()
@@ -84,10 +86,13 @@ export async function createReturn(o: { saleId: string; items: ReturnItem[]; typ
     const cn: CreditNote = { id, saleId: sale.id, at, userId, approvedBy: o.approvedBy ?? userId, reason: o.reason.trim(), type: o.type, totalKs: out.reduce((s, c) => s + c.amountKs, 0) }
     await db.creditNotes.add(cn)
     await db.creditLines.bulkAdd(out)
-    if (o.type === 'refund') await db.payments.add({ saleId: id, method: o.refundMethod!, amountKs: -cn.totalKs, at })
+    // Paid with the returned goods' value (method 'credit', ref = this credit note): exchange credit left shrinks by the same amount.
+    const toDebtKs = Math.min(await owingOn(sale), cn.totalKs)
+    if (toDebtKs) await db.payments.add({ saleId: sale.id, method: 'credit', ref: id, amountKs: toDebtKs, at })
+    if (o.type === 'refund' && cn.totalKs > toDebtKs) await db.payments.add({ saleId: id, method: o.refundMethod!, amountKs: toDebtKs - cn.totalKs, at })
     await setSetting('creditSeq', seq)
-    await audit(`return.${o.type}`, `sale:${sale.id}`, undefined, { ...cn, lines: out })
-    return cn
+    await audit(`return.${o.type}`, `sale:${sale.id}`, undefined, { ...cn, lines: out, toDebtKs })
+    return { ...cn, toDebtKs }
   })
 }
 

@@ -2,39 +2,87 @@ import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import * as XLSX from 'xlsx'
 import { IMPORT_COLUMNS, type ImportError, type ParsedProduct, parseImport } from '../core/importer'
+import { formatInches, formatLargestFirst } from '../core/length'
+import { sellableRolls } from '../core/stock'
+import type { Unit } from '../core/units'
+import { audit } from '../db/audit'
 import { importProducts } from '../db/products'
+import { db } from '../db/schema'
 import { useSettings } from '../db/useSettings'
 import { Btn, Screen } from '../ui/kit'
 import { go } from '../ui/router'
 
-const EXAMPLES = [
-  ['piece', 'ရှပ်အင်္ကျီ အဖြူ', 'White shirt', 'အင်္ကျီ', 15000, 'M', 'အဖြူ', '', '', 9000, ''],
-  ['piece', 'ရှပ်အင်္ကျီ အဖြူ', 'White shirt', 'အင်္ကျီ', 15000, 'L', 'အဖြူ', '', '', 9000, ''],
-  ['length', 'ပိုးထည် အပြာ', 'Blue silk', 'ပိုးထည်', 8000, '', '', 'ကိုက်', 45, 5000, ''],
-  ['length', 'ချည်ထည် အစိမ်း', 'Green cotton', 'ချည်ထည်', 2500, '', '', 'တောင်', 36, '', ''],
+const STOCK_COL = 'stock_info' // read-only: not in IMPORT_COLUMNS, so ignored on upload
+const HEADER = [...IMPORT_COLUMNS, STOCK_COL]
+type Row = Partial<Record<(typeof HEADER)[number], string | number>>
+
+const EXAMPLES: Row[] = [
+  { type: 'piece', name_my: 'ရှပ်အင်္ကျီ အဖြူ', name_en: 'White shirt', category: 'အင်္ကျီ', price_ks: 15000, wholesale_price_ks: 12000, wholesale_min: 12, size: 'M', colour: 'အဖြူ', cost_ks: 9000 },
+  { type: 'piece', name_my: 'ရှပ်အင်္ကျီ အဖြူ', name_en: 'White shirt', category: 'အင်္ကျီ', price_ks: 15000, wholesale_price_ks: 12000, wholesale_min: 12, size: 'L', colour: 'အဖြူ', cost_ks: 9000 },
+  { type: 'length', name_my: 'ပိုးထည် အပြာ', name_en: 'Blue silk', category: 'ပိုးထည်', price_ks: 8000, wholesale_price_ks: 7000, wholesale_min: 20, pricing_unit: 'ကိုက်', width_inches: 45, cost_ks: 5000 },
+  { type: 'length', name_my: 'ချည်ထည် အစိမ်း', name_en: 'Green cotton', category: 'ချည်ထည်', price_ks: 2500, pricing_unit: 'တောင်', width_inches: 36 },
 ]
 
 const HELP = [
   ['column', 'ရှင်းလင်းချက်', 'Explanation'],
+  ['product_id', 'ပစ္စည်း နံပါတ် — "ပစ္စည်းအားလုံး ဒေါင်းလုဒ်" မှ ပါလာသည်။ မပြင်ပါနှင့်။ အလွတ် = ပစ္စည်းအသစ်', 'Filled in by "Download all products" — do not change it. Empty = new product'],
+  ['variant_id', 'အရွယ်/အရောင် နံပါတ် — မပြင်ပါနှင့်။ ပစ္စည်းဟောင်းတွင် အရွယ်အသစ် ထည့်ရန် product_id ကူးပြီး variant_id ကို အလွတ်ထားပါ', 'Size/colour number — do not change it. To add a new size to an existing product, copy its product_id and leave variant_id empty'],
   ['type', 'piece = တစ်ထည်ချင်း ရောင်း / length = အလျားဖြင့် ရောင်း (ပိတ်စ)', 'piece = sold per piece, length = sold by length (fabric)'],
   ['name_my', 'အမည် (မြန်မာ) — မဖြစ်မနေ', 'Burmese name — required'],
   ['name_en', 'အမည် (အင်္ဂလိပ်) — မထည့်လည်းရ', 'English name — optional'],
   ['category', 'အမျိုးအစား', 'Category'],
   ['price_ks', 'piece: တစ်ထည် ဈေး / length: ယူနစ်တစ်ခု ဈေး (ကျပ်)', 'piece: price per piece / length: price per pricing unit (Ks)'],
+  ['wholesale_price_ks', 'လက်ကား ဈေး (price_ks နှင့် ယူနစ်တူ) — မထည့်လည်းရ', 'Wholesale price, same unit as price_ks — optional'],
+  ['wholesale_min', 'လက်ကား အနည်းဆုံး — piece: အထည်ရေ (အရွယ်/အရောင် အားလုံး ပေါင်း) / length: pricing_unit အရေအတွက်', 'Wholesale minimum — piece: number of pieces (all sizes/colours together) / length: number of pricing units'],
   ['size', 'အရွယ် (piece)', 'Size (piece)'],
   ['colour', 'အရောင် (piece)', 'Colour (piece)'],
   ['pricing_unit', 'ကိုက် / တောင် / ထွာ / မိုက် / လက်မ (မထည့်ရင် ကိုက်)', 'Pricing unit (default ကိုက်)'],
   ['width_inches', 'ပိတ်စ အနံ (လက်မ) ဥပမာ 36, 45, 58.4', 'Fabric width in inches'],
   ['cost_ks', 'အရင်း (ကျပ်) — မထည့်လည်းရ', 'Cost (Ks) — optional'],
-  ['barcode', 'ရှိပြီးသား ဘားကုဒ် — မထည့်ရင် အလိုအလျောက် ထုတ်ပေးမည်။ ကော်လံကို Text format ထားပါ', 'Existing barcode — leave empty to generate one. Format this column as Text so leading zeros are kept'],
+  ['barcode', 'ရှိပြီးသား ဘားကုဒ် — မထည့်ရင် အလိုအလျောက် ထုတ်ပေးမည်။ ကော်လံကို Text format ထားပါ။ ဘားကုဒ် ဖယ်ရှားခြင်းကို app ထဲတွင် လုပ်ပါ', 'Existing barcode — leave empty to generate one. Format this column as Text so leading zeros are kept. A new code is added; removing barcodes is done in the app'],
+  ['active', 'yes = ရောင်းမည် / no = ဖျောက်ထားမည် (အလွတ် = yes)', 'yes = for sale / no = hidden (empty = yes)'],
+  [STOCK_COL, 'လက်ကျန် — ကြည့်ရန်သာ။ ဒီမှာ ပြင်လည်း မပြောင်းပါ (လက်ကျန်ကို app ထဲတွင် ရေတွက်ပါ)', 'Stock — for reference only; changes here are ignored (count stock in the app)'],
   ['', 'အရွယ်/အရောင် များရင် တစ်ကြောင်းစီ ရေးပါ (အမည်တူ၊ အမျိုးအစားတူ)', 'One row per size/colour (same name and category)'],
+  ['', 'အကြောင်း ဖျက်လိုက်ရင် ပစ္စည်း မပျက်ပါ — ဖျောက်ရန် active = no ထားပါ', 'Deleting a row does not delete the product — set active = no to hide it'],
 ]
 
-export function downloadTemplate() {
+function writeBook(rows: Row[], filename: string) {
   const wb = XLSX.utils.book_new()
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([[...IMPORT_COLUMNS], ...EXAMPLES]), 'products')
+  const ws = XLSX.utils.json_to_sheet(rows, { header: HEADER })
+  ws['!cols'] = HEADER.map((h) => ({ wch: h === 'name_my' || h === 'name_en' ? 28 : 14 }))
+  XLSX.utils.book_append_sheet(wb, ws, 'products')
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(HELP), 'help')
-  XLSX.writeFile(wb, 'u-ahi-products-template.xlsx')
+  XLSX.writeFile(wb, filename)
+}
+
+export function downloadTemplate() {
+  writeBook(EXAMPLES, 'u-ahi-products-template.xlsx')
+}
+
+/** Every product as sheet rows (one per size/colour), ready to edit and upload again. */
+export async function productRows(units: Unit[]): Promise<Row[]> {
+  const [products, variants, barcodes, categories, rolls] = await Promise.all([db.products.toArray(), db.variants.toArray(), db.barcodes.toArray(), db.categories.toArray(), db.rolls.toArray()])
+  const cat = new Map(categories.map((c) => [c.id, c]))
+  const code = (pid: number, vid?: number) => barcodes.find((b) => b.productId === pid && b.variantId === vid)?.code ?? ''
+  products.sort((a, b) => (cat.get(a.categoryId)?.sort ?? 1e9) - (cat.get(b.categoryId)?.sort ?? 1e9) || a.nameMy.localeCompare(b.nameMy))
+  const rows: Row[] = []
+  for (const p of products) {
+    const base: Row = {
+      product_id: p.id, type: p.kind, name_my: p.nameMy, name_en: p.nameEn, category: cat.get(p.categoryId)?.nameMy ?? '',
+      wholesale_price_ks: p.wholesalePriceKs, wholesale_min: p.wholesaleMin, cost_ks: p.costKs, active: p.active ? 'yes' : 'no',
+    }
+    if (p.kind === 'length') {
+      const left = sellableRolls(rolls.filter((r) => r.productId === p.id)).reduce((s, r) => s + r.remainingTenths, 0)
+      rows.push({
+        ...base, price_ks: p.unitPriceKs, pricing_unit: units.find((u) => u.code === p.pricingUnit)?.nameMy ?? p.pricingUnit,
+        width_inches: p.widthTenths ? formatInches(p.widthTenths) : '', barcode: code(p.id!), [STOCK_COL]: formatLargestFirst(left, units, 'my'),
+      })
+    } else {
+      for (const v of variants.filter((x) => x.productId === p.id))
+        rows.push({ ...base, variant_id: v.id, price_ks: v.priceKs ?? p.priceKs, size: v.size, colour: v.colour, barcode: code(p.id!, v.id), [STOCK_COL]: v.qty })
+    }
+  }
+  return rows
 }
 
 export function Import() {
@@ -44,6 +92,12 @@ export function Import() {
   const [parsed, setParsed] = useState<{ products: ParsedProduct[]; errors: ImportError[] }>()
   const [msg, setMsg] = useState<{ ok: boolean; text: string }>()
   const [busy, setBusy] = useState(false)
+
+  async function downloadAll() {
+    if (!settings) return
+    await audit('export.excel', 'products')
+    writeBook(await productRows(settings.units), `u-ahi-products-${new Date().toISOString().slice(0, 10)}.xlsx`)
+  }
 
   async function pick(file?: File) {
     if (!file || !settings) return
@@ -64,7 +118,7 @@ export function Import() {
     try {
       const n = await importProducts(parsed.products)
       setParsed(undefined)
-      setMsg({ ok: true, text: t('import.done', { count: n }) })
+      setMsg({ ok: true, text: t('import.doneUpdate', n) })
     } catch (e) {
       setMsg({ ok: false, text: String(e) })
     } finally {
@@ -72,7 +126,7 @@ export function Import() {
     }
   }
 
-  const variants = parsed?.products.reduce((n, p) => n + Math.max(1, p.variants.length), 0) ?? 0
+  const updating = parsed?.products.filter((p) => p.id).length ?? 0
 
   return (
     <Screen title={t('import.title')}>
@@ -82,6 +136,9 @@ export function Import() {
           <li>{t('import.step2')}</li>
           <li>{t('import.step3')}</li>
         </ol>
+        <Btn variant="plain" className="w-full" onClick={downloadAll} data-testid="download-products">
+          ⬇ {t('import.downloadAll')}
+        </Btn>
         <Btn variant="plain" className="w-full" onClick={downloadTemplate}>
           ⬇ {t('import.template')}
         </Btn>
@@ -101,7 +158,7 @@ export function Import() {
         )}
         {parsed && (
           <div className="rounded-2xl border-2 border-slate-200 p-4">
-            <p className="text-xl font-bold">{t('import.preview', { products: parsed.products.length, labels: variants })}</p>
+            <p className="text-xl font-bold">{t('import.previewUpdate', { added: parsed.products.length - updating, updated: updating })}</p>
             {parsed.errors.length > 0 && (
               <>
                 <p className="mt-2 text-xl font-bold text-red-800">{t('import.errors', { count: parsed.errors.length })}</p>

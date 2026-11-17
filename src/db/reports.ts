@@ -11,8 +11,8 @@ export async function loadReportInput(from: number, to: number): Promise<ReportI
   const isIn = inRange(from, to)
   const [lines, salePays, payouts, creditSales, creditSaleLines, products] = await Promise.all([
     db.saleLines.where('saleId').anyOf(ids).toArray(),
-    db.payments.where('saleId').anyOf(ids).toArray(),
-    db.payments.filter((p) => p.amountKs < 0 && isIn(p.at)).toArray(),
+    db.payments.where('saleId').anyOf(ids).filter((p) => p.at == null).toArray(),
+    db.payments.filter((p) => isIn(p.at)).toArray(), // payouts and later debt payments
     db.sales.bulkGet([...new Set(credits.map((c) => c.saleId))]),
     db.saleLines.where('id').anyOf(creditLines.map((c) => c.saleLineId)).toArray(),
     db.products.toArray(),

@@ -7,6 +7,7 @@ import { anyUsers, atLeast } from './db/users'
 import { AuditLog } from './screens/AuditLog'
 import { Backup } from './screens/Backup'
 import { Cloud } from './screens/Cloud'
+import { Debts } from './screens/Debts'
 import { SyncRunner } from './sync/runner'
 import { CtReport } from './screens/CtReport'
 import { Home } from './screens/Home'
@@ -96,6 +97,8 @@ function route(path: string[]): ReactNode {
       return <Return key={path[1]} saleId={decodeURIComponent(path[1] ?? '')} />
     case 'today':
       return <Today />
+    case 'debts':
+      return <Debts />
     case 'reports':
       return <Reports />
     case 'ct':

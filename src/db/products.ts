@@ -135,41 +135,57 @@ async function categoryId(nameMy: string): Promise<number | undefined> {
   return (await db.categories.add({ nameMy, nameEn: '', sort: await db.categories.count() })) as number
 }
 
-/** Import parsed Excel rows in one transaction: all or nothing. Barcodes are generated for everything. */
-export async function importProducts(items: ParsedProduct[]): Promise<number> {
+/**
+ * Import parsed Excel rows in one transaction: all or nothing. Rows with an id update that product
+ * (stock, photo, quick cuts and sizes/colours left out of the sheet are kept); the rest are added.
+ * Barcodes are generated wherever an item has none.
+ */
+export async function importProducts(items: ParsedProduct[]): Promise<{ added: number; updated: number }> {
   await requireRole('owner')
   return db.transaction('rw', WRITE_TABLES(), async () => {
+    let updated = 0
     for (const it of items) {
+      const before = it.id ? await db.products.get(it.id) : undefined
+      if (it.id && !before) throw new Error(`product_id ${it.id} (${it.nameMy}) is not in this shop`)
+      if (before && before.kind !== it.kind) throw new Error(`${it.nameMy}: type cannot change`)
       const p: Product = {
+        ...(before ?? { quickCuts: it.kind === 'length' ? DEFAULT_QUICK_CUTS : undefined }),
         kind: it.kind,
         nameMy: it.nameMy,
         nameEn: it.nameEn,
         categoryId: await categoryId(it.category),
         costKs: it.costKs,
-        active: true,
+        active: it.active,
         priceKs: it.priceKs,
         pricingUnit: it.pricingUnit,
         unitPriceKs: it.unitPriceKs,
         widthTenths: it.widthTenths,
-        quickCuts: it.kind === 'length' ? DEFAULT_QUICK_CUTS : undefined,
+        wholesalePriceKs: it.wholesalePriceKs,
+        wholesaleMin: it.wholesaleMin,
         updatedAt: Date.now(),
       }
       // Assign supplier barcodes first so generated ones are only added where none were given.
-      const id = (await db.products.add(p)) as number
-      if (it.kind === 'length' && it.barcode) await assignOrThrow(it.barcode, id)
+      const id = (await db.products.put(p)) as number
+      if (it.kind === 'length' && it.barcode) await linkCode(it.barcode, id)
       for (const v of it.variants) {
-        const vid = (await db.variants.add({ productId: id, size: v.size, colour: v.colour, priceKs: v.priceKs, qty: 0 })) as number
-        if (v.barcode) await assignOrThrow(v.barcode, id, vid)
+        const old = v.id ? await db.variants.get(v.id) : undefined
+        if (v.id && old?.productId !== id) throw new Error(`variant_id ${v.id} does not belong to ${it.nameMy}`)
+        const vid = (await db.variants.put({ ...(old ?? { productId: id, qty: 0 }), size: v.size, colour: v.colour, priceKs: v.priceKs })) as number
+        if (v.barcode) await linkCode(v.barcode, id, vid)
       }
       await ensureBarcodes({ ...p, id })
-      await audit('product.import', `product:${id}`, undefined, { ...p, id })
+      await audit(before ? 'product.update' : 'product.import', `product:${id}`, before, { ...p, id })
+      if (before) updated++
     }
-    return items.length
+    return { added: items.length - updated, updated }
   })
 }
 
-async function assignOrThrow(code: string, productId: number, variantId?: number) {
-  if (await db.barcodes.get(code)) throw new Error(`Barcode already in use: ${code}`)
+/** Link a barcode from the sheet; already on this item = nothing to do; on another item = error. */
+async function linkCode(code: string, productId: number, variantId?: number) {
+  const taken = await db.barcodes.get(code)
+  if (taken && taken.productId === productId && taken.variantId === variantId) return
+  if (taken) throw new Error(`Barcode already in use: ${code}`)
   await db.barcodes.add({ code, productId, variantId, source: 'assigned', createdAt: Date.now() })
 }
 

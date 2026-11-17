@@ -1,10 +1,12 @@
 import { useState } from 'react'
+import { useLiveQuery } from 'dexie-react-hooks'
 import { useTranslation } from 'react-i18next'
 import { formatKs } from '../../core/money'
-import type { PaymentInput } from '../../db/sales'
+import type { PaymentInput, SaleOptions } from '../../db/sales'
+import { db } from '../../db/schema'
 import type { Settings } from '../../db/settings'
 import { methodName } from '../../ui/format'
-import { Btn, toInt } from '../../ui/kit'
+import { Btn, inputCls, toInt } from '../../ui/kit'
 import { useScanner } from '../../ui/useScanner'
 
 const NOTES = [50, 100, 200, 500, 1000, 5000, 10000, 20000]
@@ -21,7 +23,7 @@ export function Payment({
   settings: Settings
   credit?: { cnId: string; leftKs: number } // exchange credit from a return
   onBack: () => void
-  onFinish: (p: PaymentInput[], creditBackKs: number) => Promise<void>
+  onFinish: (p: PaymentInput[], creditBackKs: number, debtor?: SaleOptions['debtor']) => Promise<void>
 }) {
   const { t, i18n } = useTranslation()
   const methods = settings.paymentMethods.filter((m) => m.active)
@@ -34,6 +36,8 @@ export function Payment({
   const [ref, setRef] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const [owe, setOwe] = useState<{ name: string; phone: string }>()
+  const debtorNames = useLiveQuery(() => (owe ? db.sales.orderBy('debtor').uniqueKeys() : []), [!!owe])
   useScanner(null)
 
   const due = totalKs - paid.reduce((s, p) => s + p.amountKs, 0)
@@ -67,6 +71,21 @@ export function Payment({
     setBusy(true)
     try {
       await onFinish(fullyPaid ? paid : [...paid, current!], creditBack)
+    } catch (e) {
+      setError(String(e))
+      setBusy(false)
+    }
+  }
+
+  // Partly paid: what is taken now (parts + this screen's amount if it doesn't cover all) and what stays owed.
+  const paidNow = current && !covers ? [...paid, current] : paid
+  const owedKs = totalKs - paidNow.reduce((s, p) => s + p.amountKs, 0)
+
+  async function finishOwed() {
+    if (!owe?.name.trim() || owedKs <= 0) return
+    setBusy(true)
+    try {
+      await onFinish(paidNow, creditBack, { name: owe.name, phone: owe.phone })
     } catch (e) {
       setError(String(e))
       setBusy(false)
@@ -117,7 +136,31 @@ export function Payment({
         </section>
 
         <section className="space-y-3">
-          {fullyPaid ? (
+          {owe ? (
+            <div className="space-y-3 rounded-2xl border-2 border-amber-400 bg-amber-50 p-4" data-testid="owe-form">
+              <p className="flex justify-between text-2xl">
+                <span>{t('debt.paidNow')}</span>
+                <b>{formatKs(totalKs - owedKs)}</b>
+              </p>
+              <p className="flex justify-between text-3xl font-bold text-amber-900">
+                <span>{t('debt.owed')}</span>
+                <span data-testid="owed">{formatKs(owedKs)}</span>
+              </p>
+              <label className="block text-xl">
+                {t('debt.name')}
+                <input autoFocus className={inputCls} list="debtor-names" value={owe.name} onChange={(e) => setOwe({ ...owe, name: e.target.value })} />
+              </label>
+              <datalist id="debtor-names">
+                {debtorNames?.map((n) => (
+                  <option key={String(n)} value={String(n)} />
+                ))}
+              </datalist>
+              <label className="block text-xl">
+                {t('debt.phone')}
+                <input className={inputCls} inputMode="tel" value={owe.phone} onChange={(e) => setOwe({ ...owe, phone: e.target.value })} />
+              </label>
+            </div>
+          ) : fullyPaid ? (
             <div className="rounded-2xl bg-green-100 p-4 text-center text-green-900">
               <div className="text-2xl">{t(creditBack > 0 ? 'pay.creditBack' : 'pay.paidByCredit')}</div>
               {creditBack > 0 && (
@@ -179,10 +222,14 @@ export function Payment({
 
           {error && <p className="rounded-xl bg-red-100 p-3 text-xl font-bold text-red-900">{error}</p>}
           <div className="grid grid-cols-2 gap-3">
-            <Btn variant="plain" className="min-h-20 text-2xl" onClick={onBack}>
+            <Btn variant="plain" className="min-h-20 text-2xl" onClick={owe ? () => setOwe(undefined) : onBack}>
               ← {t('common.back')}
             </Btn>
-            {current && !covers ? (
+            {owe ? (
+              <Btn variant="ok" className="min-h-20 text-2xl" disabled={!owe.name.trim() || owedKs <= 0 || busy} onClick={finishOwed}>
+                ✓ {t('debt.confirm')}
+              </Btn>
+            ) : current && !covers ? (
               <Btn className="min-h-20 text-2xl" onClick={addPart}>
                 {t('pay.addPart')}
               </Btn>
@@ -192,6 +239,11 @@ export function Payment({
               </Btn>
             )}
           </div>
+          {!owe && !fullyPaid && !covers && (
+            <Btn variant="plain" className="w-full border-amber-400 text-xl" onClick={() => setOwe({ name: '', phone: '' })} data-testid="owe">
+              📒 {t('debt.payLater')}
+            </Btn>
+          )}
         </section>
       </div>
     </div>

@@ -10,7 +10,7 @@ import type { Settings } from '../../db/settings'
 import { subText } from '../../ui/format'
 
 export function pieceItem(t: TFunction, p: Product, v: Variant): Omit<PieceLine, 'key' | 'kind' | 'qty'> {
-  return { productId: p.id!, variantId: v.id!, nameMy: p.nameMy, sub: subText(t, p, v), unitPriceKs: v.priceKs ?? p.priceKs ?? 0 }
+  return { productId: p.id!, variantId: v.id!, nameMy: p.nameMy, sub: subText(t, p, v), unitPriceKs: v.priceKs ?? p.priceKs ?? 0, wholesaleKs: p.wholesalePriceKs, wholesaleMin: p.wholesaleMin }
 }
 
 /** Price of a cut. A remnant roll is sold at its % off, or — when sold whole — at its fixed price. */
@@ -29,6 +29,7 @@ export function lengthLine(t: TFunction, p: Product, entered: EnteredLength, s: 
     key, kind: 'length', productId: p.id!, nameMy: p.nameMy, sub: subText(t, p), entered, lengthTenths,
     unitPriceKs: p.unitPriceKs ?? 0, pricingUnit: p.pricingUnit ?? 'gaik', unitTenths, lineTotalKs: totalKs,
     rollId: roll?.id, remnantPct: !whole && pct ? pct : undefined, wholeRemnant: whole && !!roll?.remnantPriceKs ? true : undefined,
+    wholesaleKs: p.wholesalePriceKs, wholesaleMin: p.wholesaleMin && p.wholesaleMin * unitTenths, // min is in pricing units
   }
 }
 
