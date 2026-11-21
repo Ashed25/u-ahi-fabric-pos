@@ -8,7 +8,7 @@ type Chr = {
   writeValueWithResponse(b: BufferSource): Promise<void>
   writeValueWithoutResponse(b: BufferSource): Promise<void>
 }
-type Gatt = { connected: boolean; connect(): Promise<Gatt>; disconnect(): void; getPrimaryServices(): Promise<{ getCharacteristics(): Promise<Chr[]> }[]> }
+type Gatt = { connected: boolean; connect(): Promise<Gatt>; getPrimaryServices(): Promise<{ getCharacteristics(): Promise<Chr[]> }[]> }
 type BtDevice = { id: string; name?: string; gatt?: Gatt }
 type Port = { writable: WritableStream<Uint8Array> | null; open(o: { baudRate: number }): Promise<void>; close(): Promise<void>; getInfo(): { bluetoothServiceClassId?: unknown } }
 const nav = navigator as Navigator & {
@@ -38,22 +38,10 @@ const BLE_OPTS = {
 }
 const SERIAL_OPTS = { allowedBluetoothServiceClassIds: [SPP], filters: [{ bluetoothServiceClassId: SPP }] }
 
-// Live link for this app session. Cheap printers take one device at a time, so we let go of it soon after printing
-// (other tablets/phones can then print) and reconnect on the next print.
-const RELEASE_MS = 5000 // also gives the radio time to deliver the last bytes before we disconnect
+// Live link for this app session, held open on purpose: these printers take one device at a time, so holding it keeps other phones off.
 let dev: BtDevice | undefined
 let chr: Chr | undefined
 let port: Port | undefined
-let idle: ReturnType<typeof setTimeout> | undefined
-
-function releaseLater() {
-  clearTimeout(idle)
-  idle = setTimeout(() => {
-    dev?.gatt?.disconnect()
-    chr = undefined
-    port?.close().catch(() => {})
-  }, RELEASE_MS)
-}
 
 async function writable(d: BtDevice): Promise<Chr> {
   // Android often fails the first GATT connect after the link was idle; one retry fixes it. Still failing = printer off, away, or held by another device.
@@ -69,13 +57,11 @@ export async function connectPrinter(kind: Printer['kind']): Promise<Printer> {
     const d = await nav.bluetooth!.requestDevice(BLE_OPTS)
     chr = await writable(d)
     dev = d
-    releaseLater()
     return { kind, id: d.id, name: d.name || 'Bluetooth printer' }
   }
   await port?.close().catch(() => {})
   port = await nav.serial!.requestPort(SERIAL_OPTS)
   await port.open({ baudRate: 9600 }) // RFCOMM ignores the baud rate, but open() requires one
-  releaseLater()
   return { kind, id: '', name: 'Bluetooth (classic)' }
 }
 
@@ -105,7 +91,6 @@ async function send(p: Printer, data: Uint8Array<ArrayBuffer>) {
 export async function printRows(p: Printer, rows: Row[]) {
   const c = await receiptCanvas(rows, DOTS, 8, 24) // 24-dot top: Burmese marks above the first line were clipped at 8
   const bytes = escPosRaster(c.getContext('2d')!.getImageData(0, 0, c.width, c.height).data, c.width, c.height, 6)
-  clearTimeout(idle) // don't let go mid-print
   try {
     await send(p, bytes)
   } catch (e) {
@@ -113,7 +98,5 @@ export async function printRows(p: Printer, rows: Row[]) {
     chr = undefined
     await port?.close().catch(() => {})
     throw e
-  } finally {
-    releaseLater()
   }
 }
