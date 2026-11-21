@@ -517,5 +517,15 @@
   "wholesale.err": "Wholesale: fill both price and minimum as whole numbers, or leave both empty",
   "import.downloadAll": "Download all products (to edit)",
   "import.previewUpdate": "{{added}} new products, {{updated}} to update",
-  "import.doneUpdate": "{{added}} added, {{updated}} updated"
+  "import.doneUpdate": "{{added}} added, {{updated}} updated",
+  "settings.printing": "Receipt printer (58 mm Bluetooth)",
+  "printer.none": "No printer connected on this device.",
+  "printer.connected": "Printer: {{name}}",
+  "printer.connect": "Connect printer",
+  "printer.connectSerial": "Not in the list? Connect by classic Bluetooth",
+  "printer.hint": "Turn the printer on first. For classic Bluetooth, pair it in the tablet’s Bluetooth settings first. You only need to connect once.",
+  "printer.test": "Test print",
+  "printer.printing": "Printing…",
+  "printer.failed": "Couldn’t print. Check the printer is on and close by, then try again — or tap “Share”.",
+  "printer.unsupported": "This browser can’t reach Bluetooth printers. Use Chrome on Android, or tap “Share” on the receipt and send it to the printer app."
 }

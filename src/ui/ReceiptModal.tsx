@@ -4,13 +4,15 @@ import { useTranslation } from 'react-i18next'
 import { download } from '../db/backup'
 import { saleDetail } from '../db/sales'
 import type { Settings } from '../db/settings'
+import { printRows } from './btPrinter'
 import { Btn, Modal } from './kit'
-import { receiptImage, receiptRows } from './receipt'
+import { receiptImage, receiptRows, type Row } from './receipt'
 
-/** On-screen receipt: Print for the customer, Save a copy to this device, Share (Viber/Messenger / printer app). */
+/** On-screen receipt: Print for the customer (Bluetooth receipt printer if connected, else the system print dialog), Save a copy to this device, Share (Viber/Messenger / printer app). */
 export function ReceiptModal({ saleId, settings, copy, onClose }: { saleId: string; settings: Settings; copy: boolean; onClose: () => void }) {
   const { t, i18n } = useTranslation()
-  const [img, setImg] = useState<{ blob: Blob; url: string }>()
+  const [img, setImg] = useState<{ blob: Blob; url: string; rows: Row[] }>()
+  const [printing, setPrinting] = useState(false)
   const [error, setError] = useState('')
   const [noDialog, setNoDialog] = useState(false)
 
@@ -19,9 +21,10 @@ export function ReceiptModal({ saleId, settings, copy, onClose }: { saleId: stri
     ;(async () => {
       const d = await saleDetail(saleId)
       if (!d) return setError('?')
-      const blob = await receiptImage(receiptRows(t, i18n.language, settings, d, copy))
+      const rows = receiptRows(t, i18n.language, settings, d, copy)
+      const blob = await receiptImage(rows)
       url = URL.createObjectURL(blob)
-      setImg({ blob, url })
+      setImg({ blob, url, rows })
     })().catch((e) => setError(String(e)))
     return () => {
       if (url) URL.revokeObjectURL(url)
@@ -31,8 +34,20 @@ export function ReceiptModal({ saleId, settings, copy, onClose }: { saleId: stri
   const fileName = `receipt-${saleId}.png`
 
   // Same trick as label printing: installed phone/tablet apps silently ignore window.print().
-  function print() {
+  async function print() {
     setNoDialog(false)
+    setError('')
+    if (settings.printer && img) {
+      setPrinting(true)
+      try {
+        await printRows(settings.printer, img.rows)
+      } catch (e) {
+        setError(`${t('printer.failed')} (${(e as Error).message})`)
+      } finally {
+        setPrinting(false)
+      }
+      return
+    }
     let opened = false
     const seen = () => (opened = true)
     window.addEventListener('beforeprint', seen, { once: true })
@@ -65,8 +80,8 @@ export function ReceiptModal({ saleId, settings, copy, onClose }: { saleId: stri
         </p>
       )}
       <div className="mt-4 grid grid-cols-2 gap-3">
-        <Btn variant="ok" disabled={!img} onClick={print}>
-          🖨 {t('receipt.print')}
+        <Btn variant="ok" disabled={!img || printing} onClick={print}>
+          🖨 {printing ? t('printer.printing') : t('receipt.print')}
         </Btn>
         <Btn variant="plain" disabled={!img} onClick={() => img && download(img.blob, fileName)}>
           💾 {t('receipt.save')}

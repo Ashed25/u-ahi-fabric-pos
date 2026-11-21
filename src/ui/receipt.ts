@@ -6,7 +6,7 @@ import type { Payment, Sale, SaleLine } from '../db/schema'
 import type { Settings } from '../db/settings'
 import { methodName, unitName } from './format'
 
-type Row = { left: string; right?: string; bold?: boolean; size?: number; center?: boolean; small?: boolean; rule?: boolean }
+export type Row = { left: string; right?: string; bold?: boolean; size?: number; center?: boolean; small?: boolean; rule?: boolean }
 
 /** Builds the receipt rows (text only) — the same rows are drawn to an image for sharing. */
 export function receiptRows(t: TFunction, lang: string, s: Settings, d: { sale: Sale; lines: SaleLine[]; payments: Payment[] }, copy: boolean): Row[] {
@@ -54,8 +54,6 @@ export function receiptRows(t: TFunction, lang: string, s: Settings, d: { sale: 
   return rows
 }
 
-const W = 576 // 80 mm receipt width at 7 px/mm
-const PAD = 24
 const FONT = '"Noto Sans Myanmar", sans-serif'
 
 function wrap(g: CanvasRenderingContext2D, text: string, width: number): string[] {
@@ -72,8 +70,14 @@ function wrap(g: CanvasRenderingContext2D, text: string, width: number): string[
   return out
 }
 
-/** Draws the receipt rows to a PNG for sharing via Viber / Messenger. */
+/** Draws the receipt rows to a PNG for sharing via Viber / Messenger (80 mm wide at 7 px/mm). */
 export async function receiptImage(rows: Row[]): Promise<Blob> {
+  const c = await receiptCanvas(rows, 576, 24)
+  return new Promise((res, rej) => c.toBlob((b) => (b ? res(b) : rej(new Error('receipt image failed'))), 'image/png'))
+}
+
+/** Draws the rows at exactly W px wide (the thermal printer gets W = its dot width, so nothing is scaled or blurred). */
+export async function receiptCanvas(rows: Row[], W: number, PAD: number): Promise<HTMLCanvasElement> {
   await Promise.all([document.fonts.load(`24px ${FONT}`), document.fonts.load(`bold 24px ${FONT}`)])
   const c = document.createElement('canvas')
   const g = c.getContext('2d')!
@@ -113,5 +117,5 @@ export async function receiptImage(rows: Row[]): Promise<Blob> {
     }
     y += h
   }
-  return new Promise((res, rej) => c.toBlob((b) => (b ? res(b) : rej(new Error('receipt image failed'))), 'image/png'))
+  return c
 }

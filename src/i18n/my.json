@@ -517,5 +517,15 @@
   "wholesale.err": "လက်ကား: ဈေးနှင့် အနည်းဆုံး နှစ်ခုလုံး ဂဏန်းဖြင့် ထည့်ပါ၊ သို့ နှစ်ခုလုံး အလွတ်ထားပါ",
   "import.downloadAll": "ပစ္စည်းအားလုံး ဒေါင်းလုဒ် (ပြင်ရန်)",
   "import.previewUpdate": "ပစ္စည်းအသစ် {{added}} ခု၊ ပြင်မည် {{updated}} ခု",
-  "import.doneUpdate": "အသစ် {{added}} ခု ထည့်ပြီး၊ {{updated}} ခု ပြင်ပြီး"
+  "import.doneUpdate": "အသစ် {{added}} ခု ထည့်ပြီး၊ {{updated}} ခု ပြင်ပြီး",
+  "settings.printing": "ပြေစာ ပရင်တာ (၅၈ မီလီ Bluetooth)",
+  "printer.none": "ဒီစက်တွင် ပရင်တာ မချိတ်ရသေးပါ။",
+  "printer.connected": "ပရင်တာ: {{name}}",
+  "printer.connect": "ပရင်တာ ချိတ်ရန်",
+  "printer.connectSerial": "စာရင်းထဲ မပါလျှင် — classic Bluetooth ဖြင့် ချိတ်ရန်",
+  "printer.hint": "ပရင်တာကို အရင် ဖွင့်ထားပါ။ classic Bluetooth ဖြင့် ချိတ်မည်ဆိုလျှင် တက်ဘလက်၏ Bluetooth ဆက်တင်တွင် အရင် pair လုပ်ပါ။ တစ်ကြိမ်သာ ချိတ်ရန် လိုသည်။",
+  "printer.test": "စမ်းသပ် ပရင့်ထုတ်ရန်",
+  "printer.printing": "ပရင့်ထုတ်နေသည်…",
+  "printer.failed": "ပရင့်ထုတ်၍ မရပါ။ ပရင်တာ ဖွင့်ထားပြီး အနီးတွင် ရှိမရှိ စစ်ပြီး ထပ်ကြိုးစားပါ — သို့မဟုတ် “ပို့ရန်” ကို နှိပ်ပါ။",
+  "printer.unsupported": "ဒီ browser မှ Bluetooth ပရင်တာသို့ မချိတ်နိုင်ပါ။ Android ပေါ်ရှိ Chrome ကို သုံးပါ၊ သို့မဟုတ် ပြေစာတွင် “ပို့ရန်” ကို နှိပ်ပြီး ပရင်တာ app သို့ ပို့ပါ။"
 }

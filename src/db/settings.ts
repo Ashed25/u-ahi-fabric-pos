@@ -11,6 +11,13 @@ export interface PaymentMethod {
   active: boolean
 }
 
+/** The receipt printer this device prints to (ble: Web Bluetooth device id; serial: Bluetooth classic via Web Serial). */
+export interface Printer {
+  kind: 'ble' | 'serial'
+  id: string
+  name: string
+}
+
 export const DEFAULT_SETTINGS = {
   shopName: 'ဦးအဟိ အထည်ဆိုင်',
   shopAddress: '',
@@ -46,6 +53,7 @@ export const DEFAULT_SETTINGS = {
   remnantBelowTenths: 360, // offer remnant when a roll is under 1 ကိုက်
   autoLockMinutes: 5,
   cashCheck: false,
+  printer: null as Printer | null, // this device only, never synced
   // Cloud (this device only, never synced)
   cloudUrl: '',
   cloudAnonKey: '',
