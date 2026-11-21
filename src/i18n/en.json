@@ -526,6 +526,6 @@
   "printer.hint": "Turn the printer on first. For classic Bluetooth, pair it in the tablet’s Bluetooth settings first. You only need to connect once.",
   "printer.test": "Test print",
   "printer.printing": "Printing…",
-  "printer.failed": "Couldn’t print. Check the printer is on and close by, then try again — or tap “Share”.",
+  "printer.failed": "Couldn’t print. Check the printer is on, close by, and not connected to another phone or tablet, then try again — or tap “Share”.",
   "printer.unsupported": "This browser can’t reach Bluetooth printers. Use Chrome on Android, or tap “Share” on the receipt and send it to the printer app."
 }
