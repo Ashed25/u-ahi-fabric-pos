@@ -527,5 +527,8 @@
   "printer.test": "Test print",
   "printer.printing": "Printing…",
   "printer.failed": "Couldn’t print. Check the printer is on, close by, and not connected to another phone or tablet, then try again — or tap “Share”.",
-  "printer.unsupported": "This browser can’t reach Bluetooth printers. Use Chrome on Android, or tap “Share” on the receipt and send it to the printer app."
+  "printer.unsupported": "This browser can’t reach Bluetooth printers. Use Chrome on Android, or tap “Share” on the receipt and send it to the printer app.",
+  "printer.label": "Label printer (40×30 / 50×30 mm Bluetooth)",
+  "labels.btPrinting": "Printing {{done}} / {{total}}…",
+  "labels.stop": "Stop"
 }

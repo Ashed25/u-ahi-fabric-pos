@@ -53,7 +53,8 @@ export const DEFAULT_SETTINGS = {
   remnantBelowTenths: 360, // offer remnant when a roll is under 1 ကိုက်
   autoLockMinutes: 5,
   cashCheck: false,
-  printer: null as Printer | null, // this device only, never synced
+  printer: null as Printer | null, // receipt printer; this device only, never synced
+  labelPrinter: null as Printer | null, // this device only, never synced
   // Cloud (this device only, never synced)
   cloudUrl: '',
   cloudAnonKey: '',

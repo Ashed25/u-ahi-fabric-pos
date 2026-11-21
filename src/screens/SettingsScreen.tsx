@@ -3,9 +3,10 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useTranslation } from 'react-i18next'
 import { audit } from '../db/audit'
 import { db } from '../db/schema'
-import { type Printer, type Settings, setSetting } from '../db/settings'
+import { type Settings, setSetting } from '../db/settings'
 import { useSettings } from '../db/useSettings'
-import { canBle, canSerial, connectPrinter, printRows } from '../ui/btPrinter'
+import { canBle, canSerial, connectPrinter, printLabels, printRows, type Slot } from '../ui/btPrinter'
+import { ean13CheckDigit } from '../core/barcode'
 import { Btn, Field, Screen, inputCls, toInt } from '../ui/kit'
 
 type Draft = Pick<Settings, 'shopName' | 'shopAddress' | 'shopPhone' | 'tin' | 'roundStep' | 'roundMode' | 'receiptEnabled' | 'receiptFooter' | 'returnPolicy' | 'practiceMode' | 'devicePrefix' | 'paymentMethods' | 'ct' | 'remnantBelowTenths' | 'cashCheck' | 'ctThresholdKs' | 'autoLockMinutes'>
@@ -18,8 +19,6 @@ export function SettingsScreen() {
   const [d, setD] = useState<Draft>()
   const [ctRate, setCtRate] = useState('')
   const [msg, setMsg] = useState<{ ok: boolean; text: string }>()
-  const [pmsg, setPmsg] = useState<{ ok: boolean; text: string }>()
-  const [printing, setPrinting] = useState(false)
 
   useEffect(() => {
     if (settings && !d) {
@@ -43,37 +42,6 @@ export function SettingsScreen() {
       }
     }
     setMsg({ ok: true, text: t('common.saved') })
-  }
-
-  async function connect(kind: Printer['kind']) {
-    setPmsg(undefined)
-    try {
-      const p = await connectPrinter(kind)
-      await setSetting('printer', p)
-      setPmsg({ ok: true, text: t('printer.connected', { name: p.name }) })
-    } catch (e) {
-      setPmsg({ ok: false, text: `${t('printer.failed')} (${(e as Error).message})` })
-    }
-  }
-
-  async function testPrint() {
-    setPmsg(undefined)
-    setPrinting(true)
-    try {
-      await printRows(settings!.printer!, [
-        { left: settings!.shopName, center: true, bold: true, size: 34 },
-        { left: '', rule: true },
-        { left: 'မြန်မာစာ စမ်းသပ် ပုံနှိပ်ခြင်း', bold: true },
-        { left: 'ကျောက်ချိုင့် ညှပ်ကြိုး ဂျော်ဂျက် ပိုး ချည် ၁၂၃၄၅၆၇၈၉၀', small: true },
-        { left: 'Test print 0123456789', right: '12,500' },
-        { left: '', rule: true },
-        { left: new Date().toLocaleString(), center: true, small: true },
-      ])
-    } catch (e) {
-      setPmsg({ ok: false, text: `${t('printer.failed')} (${(e as Error).message})` })
-    } finally {
-      setPrinting(false)
-    }
   }
 
   const toggle = (label: string, value: boolean, onChange: (v: boolean) => void) => (
@@ -155,26 +123,9 @@ export function SettingsScreen() {
         </Field>
 
         <h2 className="text-2xl font-bold">{t('settings.printing')}</h2>
-        <p className="text-xl">{settings.printer ? t('printer.connected', { name: settings.printer.name }) : t('printer.none')}</p>
-        {canBle() || canSerial() ? (
-          <>
-            <p className="text-base text-slate-700">{t('printer.hint')}</p>
-            <div className="flex flex-wrap gap-2">
-              {canBle() && <Btn onClick={() => connect('ble')}>🔗 {t('printer.connect')}</Btn>}
-              {canSerial() && (
-                <Btn variant="plain" onClick={() => connect('serial')}>
-                  {t('printer.connectSerial')}
-                </Btn>
-              )}
-              <Btn variant="plain" disabled={!settings.printer || printing} onClick={testPrint}>
-                🖨 {printing ? t('printer.printing') : t('printer.test')}
-              </Btn>
-            </div>
-          </>
-        ) : (
-          <p className="rounded-lg bg-amber-100 p-3 text-amber-900">{t('printer.unsupported')}</p>
-        )}
-        {pmsg && <p className={`rounded-xl p-3 text-xl font-bold ${pmsg.ok ? 'bg-green-100' : 'bg-red-100'}`}>{pmsg.text}</p>}
+        <PrinterSetup slot="printer" settings={settings} />
+        <h2 className="text-2xl font-bold">{t('printer.label')}</h2>
+        <PrinterSetup slot="labelPrinter" settings={settings} />
 
         <h2 className="text-2xl font-bold">{t('settings.tax')}</h2>
         {toggle(t('settings.ctRegistered'), d.ct.registered, (v) => set({ ct: { ...d.ct, registered: v } }))}
@@ -221,5 +172,74 @@ export function SettingsScreen() {
         </Btn>
       </div>
     </Screen>
+  )
+}
+
+/** Connect once + test print, for the receipt printer or the label printer. Saved right away, on this device only. */
+function PrinterSetup({ slot, settings }: { slot: Slot; settings: Settings }) {
+  const { t } = useTranslation()
+  const [msg, setMsg] = useState<{ ok: boolean; text: string }>()
+  const [printing, setPrinting] = useState(false)
+  const printer = settings[slot]
+  const fail = (e: unknown) => setMsg({ ok: false, text: `${t('printer.failed')} (${(e as Error).message})` })
+
+  async function connect(kind: 'ble' | 'serial') {
+    setMsg(undefined)
+    try {
+      const p = await connectPrinter(kind, slot)
+      await setSetting(slot, p)
+      setMsg({ ok: true, text: t('printer.connected', { name: p.name }) })
+    } catch (e) {
+      fail(e)
+    }
+  }
+
+  async function test() {
+    setMsg(undefined)
+    setPrinting(true)
+    try {
+      if (slot === 'labelPrinter') {
+        const code = `200000000001${ean13CheckDigit('200000000001')}`
+        await printLabels(printer!, [{ code, name: 'မြန်မာစာ စမ်းသပ် ပိုးထည်', sub: 'Test label', price: '12,500' }], settings.shopName, 40, 30, () => {}, () => false)
+      } else
+        await printRows(printer!, [
+          { left: settings.shopName, center: true, bold: true, size: 34 },
+          { left: '', rule: true },
+          { left: 'မြန်မာစာ စမ်းသပ် ပုံနှိပ်ခြင်း', bold: true },
+          { left: 'ကျောက်ချိုင့် ညှပ်ကြိုး ဂျော်ဂျက် ပိုး ချည် ၁၂၃၄၅၆၇၈၉၀', small: true },
+          { left: 'Test print 0123456789', right: '12,500' },
+          { left: '', rule: true },
+          { left: new Date().toLocaleString(), center: true, small: true },
+        ])
+    } catch (e) {
+      fail(e)
+    } finally {
+      setPrinting(false)
+    }
+  }
+
+  return (
+    <>
+      <p className="text-xl">{printer ? t('printer.connected', { name: printer.name }) : t('printer.none')}</p>
+      {canBle() || canSerial() ? (
+        <>
+          <p className="text-base text-slate-700">{t('printer.hint')}</p>
+          <div className="flex flex-wrap gap-2">
+            {canBle() && <Btn onClick={() => connect('ble')}>🔗 {t('printer.connect')}</Btn>}
+            {canSerial() && (
+              <Btn variant="plain" onClick={() => connect('serial')}>
+                {t('printer.connectSerial')}
+              </Btn>
+            )}
+            <Btn variant="plain" disabled={!printer || printing} onClick={test}>
+              🖨 {printing ? t('printer.printing') : t('printer.test')}
+            </Btn>
+          </div>
+        </>
+      ) : (
+        <p className="rounded-lg bg-amber-100 p-3 text-amber-900">{t('printer.unsupported')}</p>
+      )}
+      {msg && <p className={`rounded-xl p-3 text-xl font-bold ${msg.ok ? 'bg-green-100' : 'bg-red-100'}`}>{msg.text}</p>}
+    </>
   )
 }

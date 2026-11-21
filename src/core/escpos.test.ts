@@ -20,3 +20,14 @@ it('splits tall images into bands of 255 rows', () => {
   expect([...b.subarray(2, 10)]).toEqual([0x1d, 0x76, 0x30, 0, 1, 0, 255, 0])
   expect([...b.subarray(265, 273)]).toEqual([0x1d, 0x76, 0x30, 0, 1, 0, 45, 0])
 })
+
+it('TSPL label: header, inverted bitmap (0 = black), print', async () => {
+  const { tsplLabel, tsplSetup } = await import('./tspl')
+  const b = tsplLabel(px(8, 2, [[0, 0]]), 8, 2)
+  const text = new TextDecoder('latin1').decode(b)
+  expect(text.startsWith('CLS\r\nBITMAP 0,0,1,2,0,')).toBe(true)
+  const at = 'CLS\r\nBITMAP 0,0,1,2,0,'.length
+  expect([...b.subarray(at, at + 2)]).toEqual([0x7f, 0xff])
+  expect(text.endsWith('\r\nPRINT 1,1\r\n')).toBe(true)
+  expect(new TextDecoder().decode(tsplSetup(40, 30))).toContain('SIZE 40 mm,30 mm\r\nGAP 2 mm,0 mm')
+})

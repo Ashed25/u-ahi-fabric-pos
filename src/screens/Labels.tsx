@@ -12,6 +12,8 @@ import { useRoute } from '../ui/router'
 import { dateKey } from '../core/fy'
 import { download } from '../db/backup'
 import { formatLargestFirst } from '../core/length'
+import { printLabels } from '../ui/btPrinter'
+import type { LabelText } from '../ui/labelImage'
 
 type Layout = 't40' | 't50' | 'a4' | 'book'
 const THERMAL = { t40: [40, 30], t50: [50, 30] } as const
@@ -91,7 +93,7 @@ export function Labels() {
       price: priceText(t, rollProduct, settings.units, i18n.language),
     }
     return (
-      <PrintView onBack={() => history.back()}>
+      <PrintView onBack={() => history.back()} bt={{ items: [item], w: 50, h: 30 }}>
         <PrintSheets layout="t50" items={[item]} settings={settings} skip={0} categories={data.categories} />
       </PrintView>
     )
@@ -99,7 +101,7 @@ export function Labels() {
 
   if (printing)
     return (
-      <PrintView onBack={() => setPrinting(false)}>
+      <PrintView onBack={() => setPrinting(false)} bt={layout === 't40' || layout === 't50' ? { items, w: THERMAL[layout][0], h: THERMAL[layout][1] } : undefined}>
         <PrintSheets layout={layout} items={items} settings={settings} skip={skip} categories={data.categories} />
       </PrintView>
     )
@@ -190,15 +192,33 @@ export function Labels() {
   )
 }
 
-/** Print toolbar + sheets. Installed phone/tablet apps silently ignore window.print(), so when no print
+/** Print toolbar + sheets. Thermal labels go straight to the Bluetooth label printer when one is connected (Settings).
+ *  Otherwise the print dialog; installed phone/tablet apps silently ignore window.print(), so when no print
  *  dialog shows up we offer the labels as a file to open in Chrome/Safari (or a label-printer app). */
-function PrintView({ onBack, children }: { onBack: () => void; children: ReactNode }) {
+function PrintView({ onBack, children, bt }: { onBack: () => void; children: ReactNode; bt?: { items: LabelText[]; w: number; h: number } }) {
   const { t } = useTranslation()
+  const settings = useSettings()
   const sheets = useRef<HTMLDivElement>(null)
   const [noDialog, setNoDialog] = useState(false)
   const [error, setError] = useState<string>()
+  const [done, setDone] = useState<number>() // labels sent so far while Bluetooth printing
+  const stop = useRef(false)
+  const printer = bt && settings?.labelPrinter
 
-  function print() {
+  async function print() {
+    setError(undefined)
+    if (printer) {
+      stop.current = false
+      setDone(0)
+      try {
+        await printLabels(printer, bt.items, settings!.shopName, bt.w, bt.h, setDone, () => stop.current)
+      } catch (e) {
+        setError(`${t('printer.failed')} (${(e as Error).message})`)
+      } finally {
+        setDone(undefined)
+      }
+      return
+    }
     let opened = false
     const seen = () => (opened = true)
     window.addEventListener('beforeprint', seen, { once: true })
@@ -233,13 +253,22 @@ function PrintView({ onBack, children }: { onBack: () => void; children: ReactNo
         <Btn variant="plain" onClick={onBack}>
           ← {t('common.back')}
         </Btn>
-        <Btn variant="ok" onClick={print}>
-          🖨 {t('labels.print')}
-        </Btn>
+        {done === undefined ? (
+          <Btn variant="ok" onClick={print}>
+            🖨 {t('labels.print')}
+          </Btn>
+        ) : (
+          <>
+            <span className="self-center text-xl font-bold text-white">{t('labels.btPrinting', { done, total: bt!.items.length })}</span>
+            <Btn variant="danger" onClick={() => (stop.current = true)}>
+              ⏹ {t('labels.stop')}
+            </Btn>
+          </>
+        )}
         <Btn variant="plain" onClick={share}>
           📤 {t('labels.shareFile')}
         </Btn>
-        <span className="self-center text-white">{t('labels.printHint')}</span>
+        <span className="self-center text-white">{printer ? t('printer.connected', { name: printer.name }) : t('labels.printHint')}</span>
       </div>
       {(noDialog || error) && (
         <p className="no-print m-2 rounded-lg bg-amber-100 p-3 text-amber-900" role="alert">
