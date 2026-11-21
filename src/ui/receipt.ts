@@ -77,7 +77,7 @@ export async function receiptImage(rows: Row[]): Promise<Blob> {
 }
 
 /** Draws the rows at exactly W px wide (the thermal printer gets W = its dot width, so nothing is scaled or blurred). */
-export async function receiptCanvas(rows: Row[], W: number, PAD: number): Promise<HTMLCanvasElement> {
+export async function receiptCanvas(rows: Row[], W: number, PAD: number, TOP = PAD): Promise<HTMLCanvasElement> {
   await Promise.all([document.fonts.load(`24px ${FONT}`), document.fonts.load(`bold 24px ${FONT}`)])
   const c = document.createElement('canvas')
   const g = c.getContext('2d')!
@@ -93,13 +93,13 @@ export async function receiptCanvas(rows: Row[], W: number, PAD: number): Promis
     return { r, lines, h: lines.length * lh }
   })
   c.width = W
-  c.height = PAD * 2 + laid.reduce((s, x) => s + x.h, 0)
+  c.height = TOP + PAD + laid.reduce((s, x) => s + x.h, 0)
   g.fillStyle = '#fff'
   g.fillRect(0, 0, c.width, c.height)
   g.fillStyle = '#000'
   g.textBaseline = 'top'
 
-  let y = PAD
+  let y = TOP
   for (const { r, lines, h } of laid) {
     g.font = font(r)
     if (r.rule) {

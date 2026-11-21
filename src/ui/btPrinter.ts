@@ -86,7 +86,7 @@ async function send(p: Printer, data: Uint8Array<ArrayBuffer>) {
 
 /** Draws the rows 384 dots wide and sends them as an ESC/POS raster + 6 blank lines. */
 export async function printRows(p: Printer, rows: Row[]) {
-  const c = await receiptCanvas(rows, DOTS, 8)
+  const c = await receiptCanvas(rows, DOTS, 8, 24) // 24-dot top: Burmese marks above the first line were clipped at 8
   const bytes = escPosRaster(c.getContext('2d')!.getImageData(0, 0, c.width, c.height).data, c.width, c.height, 6)
   try {
     await send(p, bytes)
