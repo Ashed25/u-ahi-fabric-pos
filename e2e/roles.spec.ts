@@ -75,8 +75,8 @@ test('owner adds a seller; seller sells; a return needs a manager PIN; owner are
   await expect(page.getByText('စကားဝှက် မှားနေသည်')).toBeVisible()
   await page.getByLabel('ပိုင်ရှင် စကားဝှက်').fill(OWNER_PASSWORD)
   await page.getByRole('button', { name: 'အိုကေ' }).click()
-  await expect(page.getByText('return.refund').first()).toBeVisible()
-  await expect(page.getByText('user.create').first()).toBeVisible()
+  await expect(page.getByText('ငွေ ပြန်အမ်းသည်').first()).toBeVisible()
+  await expect(page.getByText('ဝန်ထမ်း ထည့်သည်').first()).toBeVisible()
 
   // Sales history shows who sold
   await nav(page, '#/reports')
