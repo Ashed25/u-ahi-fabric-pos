@@ -40,6 +40,7 @@ export function Labels() {
   const [copies, setCopies] = useState<Record<number, number>>({})
   const [skip, setSkip] = useState(0)
   const [printing, setPrinting] = useState(false)
+  const [q, setQ] = useState('')
 
   const data = useLiveQuery(async () => {
     const [categories, products, variants, barcodes, rolls] = await Promise.all([
@@ -52,11 +53,26 @@ export function Labels() {
     return { categories, products: products.sort((a, b) => a.nameMy.localeCompare(b.nameMy)), variants, barcodes, rolls }
   }, [])
 
-  // Default: one label for every product in the chosen category.
+  // Default: one label for every product in the opening category. Only once, so switching category
+  // or a live data refresh doesn't wipe what the user ticked.
+  const inited = useRef(false)
   useEffect(() => {
-    if (!data) return
+    if (!data || inited.current) return
+    inited.current = true
     setCopies(Object.fromEntries(data.products.filter((p) => cat === undefined || p.categoryId === cat).map((p) => [p.id!, 1])))
   }, [data, cat])
+
+  // How many different labels one copy of a product makes (one per size/colour that has a barcode).
+  const perCopy = useMemo(() => {
+    const m: Record<number, number> = {}
+    if (!data) return m
+    for (const p of data.products) {
+      const codes = data.barcodes.filter((b) => b.productId === p.id)
+      const targets = p.kind === 'length' ? [undefined] : data.variants.filter((v) => v.productId === p.id)
+      m[p.id!] = targets.filter((v) => codes.some((c) => (v ? c.variantId === v.id : c.variantId == null))).length
+    }
+    return m
+  }, [data])
 
   const items = useMemo(() => {
     if (!data || !settings) return []
@@ -106,7 +122,14 @@ export function Labels() {
       </PrintView>
     )
 
-  const shown = data.products.filter((p) => cat === undefined || p.categoryId === cat)
+  const needle = q.trim().toLowerCase()
+  const shown = data.products.filter((p) => (cat === undefined || p.categoryId === cat) && (!needle || p.nameMy.toLowerCase().includes(needle)))
+  const printable = shown.filter((p) => perCopy[p.id!])
+  const book = layout === 'book'
+  const setN = (id: number, n: number) => setCopies((c) => ({ ...c, [id]: Math.max(0, Math.min(99, n)) }))
+  const setShown = (n: number) => setCopies((c) => ({ ...c, ...Object.fromEntries(printable.map((p) => [p.id!, n])) }))
+  const picked = data.products.filter((p) => copies[p.id!] && perCopy[p.id!]).length
+  const allShownPicked = printable.length > 0 && printable.every((p) => copies[p.id!])
   const a4 = settings.a4Layout
   const setA4 = (k: keyof Settings['a4Layout'], v: string) => {
     const n = Number(v)
@@ -148,45 +171,66 @@ export function Labels() {
           ))}
         </div>
 
-        <div className="flex gap-2">
-          <Btn variant="plain" onClick={() => setCopies(Object.fromEntries(shown.map((p) => [p.id!, 1])))}>
-            {t('labels.all')}
-          </Btn>
-          <Btn variant="plain" onClick={() => setCopies({})}>
-            {t('labels.none')}
-          </Btn>
-        </div>
+        <input className={inputCls} placeholder={t('products.search')} value={q} onChange={(e) => setQ(e.target.value)} />
 
-        <ul className="divide-y-2 divide-slate-200">
-          {shown.map((p) => (
-            <li key={p.id} className="flex items-center gap-3 py-2">
-              <Photo blob={p.photo} className="h-14 w-14 rounded-lg" />
-              <span className="flex-1 text-xl">{p.nameMy}</span>
-              {layout === 'book' ? (
-                <input
-                  type="checkbox"
-                  className="h-10 w-10"
-                  checked={!!copies[p.id!]}
-                  onChange={(e) => setCopies({ ...copies, [p.id!]: e.target.checked ? 1 : 0 })}
-                />
-              ) : (
-                <>
-                  <span className="text-base text-slate-600">{t('labels.copies')}</span>
-                  <input
-                    className={`${inputCls} w-24 text-center`}
-                    inputMode="numeric"
-                    value={copies[p.id!] ?? 0}
-                    onChange={(e) => setCopies({ ...copies, [p.id!]: toInt(e.target.value) ?? 0 })}
-                  />
-                </>
-              )}
-            </li>
-          ))}
+        <label className="flex items-center gap-3 px-2 text-lg font-bold">
+          <input type="checkbox" className="h-8 w-8 accent-blue-800" checked={allShownPicked} disabled={!printable.length} onChange={(e) => setShown(e.target.checked ? 1 : 0)} />
+          {t('labels.all')} ({printable.length})
+        </label>
+
+        <ul className="space-y-2">
+          {shown.map((p) => {
+            const n = copies[p.id!] ?? 0
+            const per = perCopy[p.id!]
+            const on = n > 0 && per > 0
+            return (
+              <li key={p.id} className={`flex items-center gap-3 rounded-xl border-2 p-2 ${on ? 'border-blue-700 bg-blue-50' : 'border-slate-200 bg-white'} ${per ? '' : 'opacity-60'}`}>
+                <label className="flex min-w-0 flex-1 items-center gap-3">
+                  <input type="checkbox" className="h-8 w-8 shrink-0 accent-blue-800" checked={on} disabled={!per} onChange={(e) => setN(p.id!, e.target.checked ? 1 : 0)} />
+                  <Photo blob={p.photo} className="h-14 w-14 shrink-0 rounded-lg" />
+                  <span className="min-w-0">
+                    <span className="block truncate text-xl">{p.nameMy}</span>
+                    {!per ? (
+                      <span className="block text-base text-red-700">{t('labels.noBarcode')}</span>
+                    ) : (
+                      per > 1 && <span className="block text-base text-slate-600">{t('labels.variantsHint', { per, count: per * (book ? 1 : Math.max(n, 1)) })}</span>
+                    )}
+                  </span>
+                </label>
+                {!book && per > 0 && (
+                  <div className="flex shrink-0 items-center gap-1" aria-label={t('labels.copies')}>
+                    <Btn variant="plain" className="h-12 w-12 px-0 text-2xl" disabled={!n} onClick={() => setN(p.id!, n - 1)} aria-label="−">
+                      −
+                    </Btn>
+                    <input
+                      className="h-12 w-14 rounded-lg border border-slate-300 bg-white text-center text-xl font-bold"
+                      inputMode="numeric"
+                      aria-label={t('labels.copies')}
+                      value={n}
+                      onFocus={(e) => e.target.select()}
+                      onChange={(e) => setN(p.id!, toInt(e.target.value) ?? 0)}
+                    />
+                    <Btn variant="plain" className="h-12 w-12 px-0 text-2xl" disabled={n >= 99} onClick={() => setN(p.id!, n + 1)} aria-label="+">
+                      +
+                    </Btn>
+                  </div>
+                )}
+              </li>
+            )
+          })}
         </ul>
 
-        <Btn variant="ok" className="sticky bottom-2 w-full py-4" disabled={!items.length} onClick={() => setPrinting(true)}>
-          {t('labels.preview', { count: items.length })}
-        </Btn>
+        <div className="sticky bottom-2 flex items-center gap-2 rounded-2xl border border-slate-300 bg-white p-2 shadow-lg">
+          <span className="px-2 text-lg">{t('labels.selected', { count: picked })}</span>
+          {picked > 0 && (
+            <Btn variant="plain" className="py-3" onClick={() => setCopies({})}>
+              {t('labels.none')}
+            </Btn>
+          )}
+          <Btn variant="ok" className="flex-1 py-4" disabled={!items.length} onClick={() => setPrinting(true)}>
+            {t('labels.preview', { count: items.length })}
+          </Btn>
+        </div>
       </div>
     </Screen>
   )

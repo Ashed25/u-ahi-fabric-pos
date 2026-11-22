@@ -530,5 +530,8 @@
   "printer.unsupported": "This browser can’t reach Bluetooth printers. Use Chrome on Android, or tap “Share” on the receipt and send it to the printer app.",
   "printer.label": "Label printer (40×30 / 50×30 mm Bluetooth)",
   "labels.btPrinting": "Printing {{done}} / {{total}}…",
-  "labels.stop": "Stop"
+  "labels.stop": "Stop",
+  "labels.noBarcode": "No barcode yet — can't print",
+  "labels.variantsHint": "{{per}} sizes/colours → {{count}} labels",
+  "labels.selected": "{{count}} selected"
 }

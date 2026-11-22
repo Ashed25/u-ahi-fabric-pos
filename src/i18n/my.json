@@ -530,5 +530,8 @@
   "printer.unsupported": "ဒီ browser မှ Bluetooth ပရင်တာသို့ မချိတ်နိုင်ပါ။ Android ပေါ်ရှိ Chrome ကို သုံးပါ၊ သို့မဟုတ် ပြေစာတွင် “ပို့ရန်” ကို နှိပ်ပြီး ပရင်တာ app သို့ ပို့ပါ။",
   "printer.label": "စာကပ် ပရင်တာ (၄၀×၃၀ / ၅၀×၃၀ မီလီ Bluetooth)",
   "labels.btPrinting": "ပရင့်ထုတ်နေသည် {{done}} / {{total}}…",
-  "labels.stop": "ရပ်ရန်"
+  "labels.stop": "ရပ်ရန်",
+  "labels.noBarcode": "ဘားကုဒ် မရှိသေးပါ — ထုတ်၍ မရပါ",
+  "labels.variantsHint": "အရွယ်/အရောင် {{per}} မျိုး → {{count}} ခု",
+  "labels.selected": "{{count}} မျိုး ရွေးထားသည်"
 }
