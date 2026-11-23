@@ -14,6 +14,7 @@ import { Home } from './screens/Home'
 import { Labels } from './screens/Labels'
 import { ProductEdit } from './screens/ProductEdit'
 import { Products } from './screens/Products'
+import { Profile } from './screens/Profile'
 import { Reports } from './screens/Reports'
 import { Return } from './screens/Return'
 import { SalesHistory, SaleView } from './screens/SalesHistory'
@@ -83,6 +84,8 @@ function route(path: string[]): ReactNode {
       return path[1] ? <SaleView key={path[1]} id={decodeURIComponent(path[1])} /> : <SalesHistory />
     case 'settings':
       return <SettingsScreen />
+    case 'profile':
+      return <Profile />
     case 'users':
       return <Users />
     case 'audit':

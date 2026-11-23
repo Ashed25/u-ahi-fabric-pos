@@ -6,7 +6,7 @@ import { createReturn, voidSale } from './returns'
 import { completeSale } from './sales'
 import { db } from './schema'
 import { receiveRoll } from './stock'
-import { checkOwnerPassword, createUser, findByPin, setCurrentUser, setupOwner, updateUser } from './users'
+import { checkOwnerPassword, createUser, findByPin, setCurrentUser, setupOwner, updateMe, updateUser } from './users'
 
 beforeEach(async () => {
   setCurrentUser(undefined)
@@ -45,6 +45,18 @@ describe('users & PINs', () => {
     await expect(updateUser(owner.id!, { role: 'manager' })).rejects.toThrow(/owner/)
     await updateUser(seller.id!, { active: false })
     expect(await findByPin('1111')).toBeUndefined() // deactivated users can't log in
+  })
+
+  it('anyone changes their own name and PIN after confirming the current PIN', async () => {
+    const { seller } = await team()
+    setCurrentUser(seller)
+    await expect(updateMe('9999', { pin: '2222' })).rejects.toThrow(/Wrong current PIN/)
+    await expect(updateMe('1111', { pin: '1234' })).rejects.toThrow(/already used/) // the owner's PIN
+    const me = await updateMe('1111', { name: ' မေမေ ', pin: '2222' })
+    expect(me.name).toBe('မေမေ')
+    expect((await findByPin('2222'))?.id).toBe(seller.id)
+    expect(await findByPin('1111')).toBeUndefined()
+    expect((await db.users.get(seller.id!))!.role).toBe('seller')
   })
 })
 

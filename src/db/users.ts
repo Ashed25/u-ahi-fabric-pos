@@ -85,6 +85,22 @@ export async function updateUser(id: number, patch: { name?: string; role?: Role
   await audit('user.update', `user:${id}`, { name: u.name, role: u.role, active: u.active }, { name: next.name, role: next.role, active: next.active, pinChanged: !!patch.pin })
 }
 
+/** Anyone logged in changes their own name / PIN. The current PIN is asked so nobody can do it at an unlocked tablet. */
+export async function updateMe(currentPin: string, patch: { name?: string; pin?: string }): Promise<User> {
+  const me = current && (await db.users.get(current.id!))
+  if (!me?.active) throw new Error('Not logged in')
+  if ((await hash(currentPin, me.salt)) !== me.pinHash) throw new Error('Wrong current PIN')
+  const next: Partial<User> = { name: patch.name?.trim() || me.name }
+  if (patch.pin) {
+    await checkNewPin(patch.pin, me.id)
+    next.salt = newSalt()
+    next.pinHash = await hash(patch.pin, next.salt)
+  }
+  await db.users.update(me.id!, next)
+  await audit('user.update', `user:${me.id}`, { name: me.name, role: me.role, active: me.active }, { name: next.name, role: me.role, active: me.active, pinChanged: !!patch.pin })
+  return { ...me, ...next }
+}
+
 export async function checkOwnerPassword(password: string): Promise<boolean> {
   for (const u of await db.users.filter((x) => x.active && x.role === 'owner' && !!x.pwHash).toArray()) if ((await hash(password, u.pwSalt!)) === u.pwHash) return true
   return false

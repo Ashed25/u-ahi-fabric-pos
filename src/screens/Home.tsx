@@ -24,6 +24,7 @@ const TILES = [
   ['import', '📥', 'import.title'],
   ['units', '📏', 'units.title'],
   ['scanner', '🔍', 'scanner.title'],
+  ['profile', '👤', 'profile.title'],
   ['backup', '💾', 'backup.title'],
   ['cloud', '☁️', 'cloud.title'],
   ['settings', '⚙️', 'settings.title'],

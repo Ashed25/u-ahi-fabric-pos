@@ -159,6 +159,9 @@ export function Cloud() {
             <Btn variant="plain" className="w-full" disabled={busy} onClick={replaceTablet}>
               {t('cloud.replaceTablet')}
             </Btn>
+            <Btn variant="plain" className="w-full" disabled={busy} onClick={disconnect}>
+              {t('cloud.disconnect')}
+            </Btn>
           </section>
         )}
 
