@@ -3,14 +3,7 @@ import { dateKey } from '../core/fy'
 import { audit } from './audit'
 import { db } from './schema'
 import { requireRole } from './users'
-
-export function download(blob: Blob, filename: string) {
-  const a = document.createElement('a')
-  a.href = URL.createObjectURL(blob)
-  a.download = filename
-  a.click()
-  setTimeout(() => URL.revokeObjectURL(a.href), 10_000)
-}
+import { download } from '../ui/download'
 
 /** Full backup incl. photos. Also how the laptop gets a copy of the data for label printing. */
 export async function exportBackup(): Promise<{ blob: Blob; filename: string }> {

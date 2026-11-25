@@ -47,8 +47,6 @@
   "product.nameEn": "Name (English) — optional",
   "product.category": "Category",
   "product.price": "Price (Ks)",
-  "product.pricingUnit": "Priced per",
-  "product.pricePerUnit": "Price per unit (Ks)",
   "product.width": "Width",
   "product.customWidth": "Other (inches)",
   "product.quickCuts": "Quick cut buttons",
@@ -84,7 +82,6 @@
   "units.nameMy": "Burmese",
   "units.nameEn": "English",
   "units.inches": "Inches",
-  "units.pricing": "Can price by",
   "units.invalid": "Enter a name and inches (e.g. 4.4) for every unit",
   "scanner.title": "Scanner test",
   "scanner.hint": "Scan any barcode. If the right digits appear, the scanner works.",
@@ -513,7 +510,6 @@
   "wholesale.tag": "wholesale",
   "wholesale.title": "Wholesale",
   "wholesale.price": "Wholesale price per piece (Ks)",
-  "wholesale.pricePerUnit": "Wholesale price per unit (Ks)",
   "wholesale.minPieces": "Minimum pieces",
   "wholesale.minUnits": "Minimum length ({{unit}})",
   "wholesale.hintPieces": "All sizes and colours of this product in one sale count together. Leave empty for no wholesale.",
@@ -611,5 +607,10 @@
   "audit.f_opening": "Money at start of day",
   "audit.f_expected": "Should be in the drawer",
   "audit.f_counted": "Counted in the drawer",
-  "audit.f_units": "Length units"
+  "audit.f_units": "Length units",
+  "import.missing": "{{count}} not in the file (rows deleted)",
+  "import.removeMissing": "Delete them from the shop (products that were sold are hidden instead)",
+  "import.doneRemove": "{{removed}} deleted, {{hidden}} hidden",
+  "product.pricePerYard": "Price per yard (Ks)",
+  "wholesale.pricePerYard": "Wholesale price per yard (Ks)"
 }

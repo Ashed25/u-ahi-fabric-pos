@@ -39,7 +39,6 @@ export function Units() {
               <th>{t('units.nameMy')}</th>
               <th>{t('units.nameEn')}</th>
               <th>{t('units.inches')}</th>
-              <th>{t('units.pricing')}</th>
             </tr>
           </thead>
           <tbody>
@@ -53,9 +52,6 @@ export function Units() {
                 </td>
                 <td className="p-1">
                   <input className={inputCls} inputMode="decimal" value={r.inches} onChange={(e) => edit(i, { inches: e.target.value })} />
-                </td>
-                <td className="p-1 text-center">
-                  <input type="checkbox" className="h-8 w-8" checked={r.pricing} onChange={(e) => edit(i, { pricing: e.target.checked })} />
                 </td>
               </tr>
             ))}

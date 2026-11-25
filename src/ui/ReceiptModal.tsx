@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
-import { download } from '../db/backup'
+import { download } from './download'
 import { saleDetail } from '../db/sales'
 import type { Settings } from '../db/settings'
 import { printRows } from './btPrinter'

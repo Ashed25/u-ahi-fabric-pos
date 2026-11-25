@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { backupInfo, download, exportBackup, restoreBackup } from '../db/backup'
+import { backupInfo, exportBackup, restoreBackup } from '../db/backup'
+import { download } from '../ui/download'
 import { Btn, Modal, Screen } from '../ui/kit'
 import { setSetting } from '../db/settings'
 

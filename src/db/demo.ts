@@ -17,7 +17,7 @@ const ITEMS: Demo[] = [
   { cat: 3, color: '#0d9488', p: { kind: 'piece', nameMy: 'မျက်နှာသုတ်ပုဝါ', nameEn: 'Towel', priceKs: 3500, costKs: 2000 }, variants: [{}], supplierCode: '8851234567890' },
   { cat: 2, color: '#2563eb', p: { kind: 'length', nameMy: 'ပိုးထည် အပြာ', nameEn: 'Blue silk', pricingUnit: 'gaik', unitPriceKs: 8000, widthTenths: 450, costKs: 5000, lowStock: 10 * YD }, rolls: [{ tenths: 50 * YD }, { tenths: 12 * YD + 180 }] },
   { cat: 2, color: '#e2e8f0', p: { kind: 'length', nameMy: 'ချည်ထည် အဖြူ', nameEn: 'White cotton', pricingUnit: 'gaik', unitPriceKs: 5500, widthTenths: 360, costKs: 3000 }, rolls: [{ tenths: 30 * YD }] },
-  { cat: 2, color: '#a855f7', p: { kind: 'length', nameMy: 'ဇာ ခရမ်း', nameEn: 'Purple lace', pricingUnit: 'taung', unitPriceKs: 4000, widthTenths: 584, costKs: 2500 }, rolls: [{ tenths: 20 * YD }, { tenths: 2 * 180 - 90, remnantPct: 30 }] },
+  { cat: 2, color: '#a855f7', p: { kind: 'length', nameMy: 'ဇာ ခရမ်း', nameEn: 'Purple lace', pricingUnit: 'gaik', unitPriceKs: 8000, widthTenths: 584, costKs: 2500 }, rolls: [{ tenths: 20 * YD }, { tenths: 2 * 180 - 90, remnantPct: 30 }] },
   { cat: 2, color: '#16a34a', p: { kind: 'length', nameMy: 'ချည်ထည် ပန်းရိုက်', nameEn: 'Printed cotton', pricingUnit: 'gaik', unitPriceKs: 3000, widthTenths: 450, lowStock: 5 * YD }, rolls: [{ tenths: 2 * 90 }] },
 ]
 

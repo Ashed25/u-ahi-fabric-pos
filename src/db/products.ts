@@ -93,18 +93,22 @@ export async function removeBarcode(code: string) {
  */
 export async function deleteProduct(id: number): Promise<boolean> {
   await requireRole('manager')
-  return db.transaction('rw', [db.products, db.variants, db.barcodes, db.rolls, db.stockMoves, db.saleLines, db.parked, db.audit], async () => {
-    if (await db.saleLines.where('productId').equals(id).count()) return false
-    if ((await db.parked.toArray()).some((h) => (h.cart as { productId: number }[]).some((l) => l.productId === id))) return false
-    const before = await db.products.get(id)
-    await db.rolls.where('productId').equals(id).delete()
-    await db.stockMoves.where('productId').equals(id).delete()
-    await db.barcodes.where('productId').equals(id).delete()
-    await db.variants.where('productId').equals(id).delete()
-    await db.products.delete(id)
-    await audit('product.delete', `product:${id}`, before, undefined)
-    return true
-  })
+  return db.transaction('rw', DELETE_TABLES(), async () => await deleteInTx(id))
+}
+
+const DELETE_TABLES = () => [db.products, db.variants, db.barcodes, db.rolls, db.stockMoves, db.saleLines, db.parked, db.audit]
+
+async function deleteInTx(id: number): Promise<boolean> {
+  if (await db.saleLines.where('productId').equals(id).count()) return false
+  if ((await db.parked.toArray()).some((h) => (h.cart as { productId: number }[]).some((l) => l.productId === id))) return false
+  const before = await db.products.get(id)
+  await db.rolls.where('productId').equals(id).delete()
+  await db.stockMoves.where('productId').equals(id).delete()
+  await db.barcodes.where('productId').equals(id).delete()
+  await db.variants.where('productId').equals(id).delete()
+  await db.products.delete(id)
+  await audit('product.delete', `product:${id}`, before, undefined)
+  return true
 }
 
 /** Deletes a category no product uses (hidden products count). Returns false otherwise. */
@@ -137,13 +141,31 @@ async function categoryId(nameMy: string): Promise<number | undefined> {
 
 /**
  * Import parsed Excel rows in one transaction: all or nothing. Rows with an id update that product
- * (stock, photo, quick cuts and sizes/colours left out of the sheet are kept); the rest are added.
- * Barcodes are generated wherever an item has none.
+ * (stock, photo and quick cuts are kept); the rest are added. Barcodes are generated wherever an item has none.
+ * removeMissing (a full downloaded sheet): products and sizes/colours whose rows were deleted are deleted too;
+ * a product that was ever sold is hidden instead, so past sales and reports keep pointing at it.
  */
-export async function importProducts(items: ParsedProduct[]): Promise<{ added: number; updated: number }> {
+export async function importProducts(items: ParsedProduct[], removeMissing = false): Promise<{ added: number; updated: number; removed: number; hidden: number }> {
   await requireRole('owner')
-  return db.transaction('rw', WRITE_TABLES(), async () => {
+  return db.transaction('rw', [...WRITE_TABLES(), ...DELETE_TABLES()], async () => {
     let updated = 0
+    let removed = 0
+    let hidden = 0
+    if (removeMissing) {
+      const missing = await missingFrom(items)
+      for (const v of missing.variants) {
+        await db.barcodes.where('variantId').equals(v.id!).delete()
+        await db.variants.delete(v.id!)
+      }
+      for (const p of missing.products) {
+        if (await deleteInTx(p.id!)) removed++
+        else if (p.active) {
+          await db.products.update(p.id!, { active: false, updatedAt: Date.now() })
+          await audit('product.update', `product:${p.id}`, p, { ...p, active: false })
+          hidden++
+        }
+      }
+    }
     for (const it of items) {
       const before = it.id ? await db.products.get(it.id) : undefined
       if (it.id && !before) throw new Error(`product_id ${it.id} (${it.nameMy}) is not in this shop`)
@@ -177,8 +199,19 @@ export async function importProducts(items: ParsedProduct[]): Promise<{ added: n
       await audit(before ? 'product.update' : 'product.import', `product:${id}`, before, { ...p, id })
       if (before) updated++
     }
-    return { added: items.length - updated, updated }
+    return { added: items.length - updated, updated, removed, hidden }
   })
+}
+
+/** What a full sheet leaves out: products with no row, and sizes/colours of listed products with no row. */
+export async function missingFrom(items: ParsedProduct[]) {
+  const listed = new Map(items.filter((it) => it.id).map((it) => [it.id!, it]))
+  const products = (await db.products.toArray()).filter((p) => !listed.has(p.id!))
+  const variants = (await db.variants.toArray()).filter((v) => {
+    const it = listed.get(v.productId)
+    return it?.kind === 'piece' && !it.variants.some((x) => x.id === v.id)
+  })
+  return { products, variants }
 }
 
 /**

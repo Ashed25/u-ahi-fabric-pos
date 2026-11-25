@@ -110,7 +110,7 @@ describe('Excel update', () => {
       { id: pid, kind: 'piece', nameMy: 'ရှပ် ၂', nameEn: '', category: '', priceKs: 16000, wholesalePriceKs: 13000, wholesaleMin: 10, active: true, variants: [{ id: m.id, size: 'M' }, { size: 'XL', barcode: '55556666' }] },
       { kind: 'length', nameMy: 'new', nameEn: '', category: '', pricingUnit: 'gaik', unitPriceKs: 1000, active: false, variants: [] },
     ])
-    expect(r).toEqual({ added: 1, updated: 1 })
+    expect(r).toEqual({ added: 1, updated: 1, removed: 0, hidden: 0 })
     expect(await db.products.get(pid)).toMatchObject({ nameMy: 'ရှပ် ၂', priceKs: 16000, wholesalePriceKs: 13000, wholesaleMin: 10 })
     const vs = await db.variants.where('productId').equals(pid).toArray()
     expect(vs.map((v) => [v.size, v.qty])).toEqual([['M', 4], ['XL', 0]])

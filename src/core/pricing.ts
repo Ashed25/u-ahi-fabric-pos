@@ -27,3 +27,20 @@ export function discountedLinePrice(unitPriceKs: number, lengthTenths: number, u
   if (!Number.isInteger(pctOff) || pctOff < 0 || pctOff >= 100) throw new Error(`bad discount ${pctOff}`)
   return fabricLinePrice(unitPriceKs * (100 - pctOff), lengthTenths, unitTenths * 100, step, mode)
 }
+
+/**
+ * Fabric prices are per yard (ကိုက်) now. An older fabric priced per another unit is shown and saved per yard:
+ * price × yard/unit, and the wholesale minimum (in pricing units) becomes whole yards, rounded up.
+ */
+export function perYard(p: { pricingUnit?: string; unitPriceKs?: number; wholesalePriceKs?: number; wholesaleMin?: number }, units: { code: string; tenths: number }[]) {
+  const unit = units.find((u) => u.code === (p.pricingUnit ?? 'gaik'))
+  const yard = units.find((u) => u.code === 'gaik')
+  if (!unit || !yard || unit === yard) return { pricingUnit: 'gaik', unitPriceKs: p.unitPriceKs, wholesalePriceKs: p.wholesalePriceKs, wholesaleMin: p.wholesaleMin }
+  const ks = (n?: number) => (n == null ? undefined : Math.round((n * yard.tenths) / unit.tenths))
+  return {
+    pricingUnit: 'gaik',
+    unitPriceKs: ks(p.unitPriceKs),
+    wholesalePriceKs: ks(p.wholesalePriceKs),
+    wholesaleMin: p.wholesaleMin == null ? undefined : Math.max(1, Math.ceil((p.wholesaleMin * unit.tenths) / yard.tenths)),
+  }
+}

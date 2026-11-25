@@ -1,68 +1,19 @@
 import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import * as XLSX from 'xlsx'
-import { IMPORT_COLUMNS, type ImportError, type ParsedProduct, parseImport } from '../core/importer'
+import { type ImportError, type ParsedProduct, parseImport } from '../core/importer'
 import { formatInches, formatLargestFirst } from '../core/length'
+import { perYard } from '../core/pricing'
 import { sellableRolls } from '../core/stock'
 import type { Unit } from '../core/units'
 import { audit } from '../db/audit'
-import { importProducts, matchExisting } from '../db/products'
+import { download } from '../ui/download'
+import { importProducts, matchExisting, missingFrom } from '../db/products'
 import { db } from '../db/schema'
 import { useSettings } from '../db/useSettings'
 import { Btn, Screen } from '../ui/kit'
 import { go } from '../ui/router'
-
-const STOCK_COL = 'stock_info' // read-only: not in IMPORT_COLUMNS, so ignored on upload
-// App-filled columns go last and hidden: the owner edits details only; ids still come back so renames stay the same product.
-const HIDDEN = ['product_id', 'variant_id', STOCK_COL] as const
-type Col = (typeof IMPORT_COLUMNS)[number] | typeof STOCK_COL
-const DETAILS: Col[] = IMPORT_COLUMNS.filter((c) => !(HIDDEN as readonly string[]).includes(c))
-const HEADER: Col[] = [...DETAILS, ...HIDDEN]
-type Row = Partial<Record<Col, string | number>>
-
-const EXAMPLES: Row[] = [
-  { type: 'piece', name_my: 'ရှပ်အင်္ကျီ အဖြူ', name_en: 'White shirt', category: 'အင်္ကျီ', price_ks: 15000, wholesale_price_ks: 12000, wholesale_min: 12, size: 'M', colour: 'အဖြူ', cost_ks: 9000 },
-  { type: 'piece', name_my: 'ရှပ်အင်္ကျီ အဖြူ', name_en: 'White shirt', category: 'အင်္ကျီ', price_ks: 15000, wholesale_price_ks: 12000, wholesale_min: 12, size: 'L', colour: 'အဖြူ', cost_ks: 9000 },
-  { type: 'length', name_my: 'ပိုးထည် အပြာ', name_en: 'Blue silk', category: 'ပိုးထည်', price_ks: 8000, wholesale_price_ks: 7000, wholesale_min: 20, pricing_unit: 'ကိုက်', width_inches: 45, cost_ks: 5000 },
-  { type: 'length', name_my: 'ချည်ထည် အစိမ်း', name_en: 'Green cotton', category: 'ချည်ထည်', price_ks: 2500, pricing_unit: 'တောင်', width_inches: 36 },
-]
-
-const HELP = [
-  ['column', 'ရှင်းလင်းချက်', 'Explanation'],
-  ['product_id', 'ဖျောက်ထားသော ကော်လံ — app က ဖြည့်ပေးသည်။ ထိစရာ မလိုပါ။ မပါရင် type၊ အမည်၊ အမျိုးအစား တူသော ပစ္စည်းကို ပြင်မည် (မရှိရင် ပစ္စည်းအသစ်)', 'Hidden column, filled in by the app — leave it. Without it, the product with the same type, name and category is updated (new product if none)'],
-  ['variant_id', 'ဖျောက်ထားသော ကော်လံ — app က ဖြည့်ပေးသည်။ အရွယ်အသစ် ထည့်ရန် အမည်၊ အမျိုးအစား တူတူဖြင့် အကြောင်းအသစ် ရေးပါ', 'Hidden column, filled in by the app. To add a new size, add a row with the same name and category'],
-  ['', 'ပစ္စည်းအသစ်အတွက် အကြောင်းဟောင်းကို ကူးမည်ဆိုရင် Excel ၏ Insert ဖြင့် အကြောင်းအလွတ် ထည့်ပြီး စာများကိုသာ ကူးပါ (ဖျောက်ထားသော နံပါတ်များ မပါစေရန်)', 'To start a new product from an existing row, insert an empty row and copy the text cells only, so the hidden numbers are not copied'],
-  ['type', 'piece = တစ်ထည်ချင်း ရောင်း / length = အလျားဖြင့် ရောင်း (ပိတ်စ)', 'piece = sold per piece, length = sold by length (fabric)'],
-  ['name_my', 'အမည် (မြန်မာ) — မဖြစ်မနေ', 'Burmese name — required'],
-  ['name_en', 'အမည် (အင်္ဂလိပ်) — မထည့်လည်းရ', 'English name — optional'],
-  ['category', 'အမျိုးအစား', 'Category'],
-  ['price_ks', 'piece: တစ်ထည် ဈေး / length: ယူနစ်တစ်ခု ဈေး (ကျပ်)', 'piece: price per piece / length: price per pricing unit (Ks)'],
-  ['wholesale_price_ks', 'လက်ကား ဈေး (price_ks နှင့် ယူနစ်တူ) — မထည့်လည်းရ', 'Wholesale price, same unit as price_ks — optional'],
-  ['wholesale_min', 'လက်ကား အနည်းဆုံး — piece: အထည်ရေ (အရွယ်/အရောင် အားလုံး ပေါင်း) / length: pricing_unit အရေအတွက်', 'Wholesale minimum — piece: number of pieces (all sizes/colours together) / length: number of pricing units'],
-  ['size', 'အရွယ် (piece)', 'Size (piece)'],
-  ['colour', 'အရောင် (piece)', 'Colour (piece)'],
-  ['pricing_unit', 'ကိုက် / တောင် / ထွာ / မိုက် / လက်မ (မထည့်ရင် ကိုက်)', 'Pricing unit (default ကိုက်)'],
-  ['width_inches', 'ပိတ်စ အနံ (လက်မ) ဥပမာ 36, 45, 58.4', 'Fabric width in inches'],
-  ['cost_ks', 'အရင်း (ကျပ်) — မထည့်လည်းရ', 'Cost (Ks) — optional'],
-  ['barcode', 'ရှိပြီးသား ဘားကုဒ် — မထည့်ရင် အလိုအလျောက် ထုတ်ပေးမည်။ ကော်လံကို Text format ထားပါ။ ဘားကုဒ် ဖယ်ရှားခြင်းကို app ထဲတွင် လုပ်ပါ', 'Existing barcode — leave empty to generate one. Format this column as Text so leading zeros are kept. A new code is added; removing barcodes is done in the app'],
-  ['active', 'yes = ရောင်းမည် / no = ဖျောက်ထားမည် (အလွတ် = yes)', 'yes = for sale / no = hidden (empty = yes)'],
-  [STOCK_COL, 'လက်ကျန် — ကြည့်ရန်သာ။ ဒီမှာ ပြင်လည်း မပြောင်းပါ (လက်ကျန်ကို app ထဲတွင် ရေတွက်ပါ)', 'Stock — for reference only; changes here are ignored (count stock in the app)'],
-  ['', 'အရွယ်/အရောင် များရင် တစ်ကြောင်းစီ ရေးပါ (အမည်တူ၊ အမျိုးအစားတူ)', 'One row per size/colour (same name and category)'],
-  ['', 'အကြောင်း ဖျက်လိုက်ရင် ပစ္စည်း မပျက်ပါ — ဖျောက်ရန် active = no ထားပါ', 'Deleting a row does not delete the product — set active = no to hide it'],
-]
-
-function writeBook(rows: Row[], filename: string, header = HEADER) {
-  const wb = XLSX.utils.book_new()
-  const ws = XLSX.utils.json_to_sheet(rows, { header })
-  ws['!cols'] = header.map((h) => ({ wch: h === 'name_my' || h === 'name_en' ? 28 : 14, hidden: (HIDDEN as readonly string[]).includes(h) }))
-  XLSX.utils.book_append_sheet(wb, ws, 'products')
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(HELP), 'help')
-  XLSX.writeFile(wb, filename)
-}
-
-export function downloadTemplate() {
-  writeBook(EXAMPLES, 'u-ahi-products-template.xlsx', DETAILS)
-}
+import { ACTIVE_WORD, buildBook, DETAILS, EXAMPLES, type Row, STOCK_COL, TYPE_WORD } from './productSheet'
 
 /** Every product as sheet rows (one per size/colour), ready to edit and upload again. */
 export async function productRows(units: Unit[]): Promise<Row[]> {
@@ -73,13 +24,14 @@ export async function productRows(units: Unit[]): Promise<Row[]> {
   const rows: Row[] = []
   for (const p of products) {
     const base: Row = {
-      product_id: p.id, type: p.kind, name_my: p.nameMy, name_en: p.nameEn, category: cat.get(p.categoryId)?.nameMy ?? '',
-      wholesale_price_ks: p.wholesalePriceKs, wholesale_min: p.wholesaleMin, cost_ks: p.costKs, active: p.active ? 'yes' : 'no',
+      product_id: p.id, type: TYPE_WORD[p.kind], name_my: p.nameMy, name_en: p.nameEn, category: cat.get(p.categoryId)?.nameMy ?? '',
+      wholesale_price_ks: p.wholesalePriceKs, wholesale_min: p.wholesaleMin, cost_ks: p.costKs, active: ACTIVE_WORD[p.active ? 'yes' : 'no'],
     }
     if (p.kind === 'length') {
       const left = sellableRolls(rolls.filter((r) => r.productId === p.id)).reduce((s, r) => s + r.remainingTenths, 0)
+      const yd = perYard(p, units)
       rows.push({
-        ...base, price_ks: p.unitPriceKs, pricing_unit: units.find((u) => u.code === p.pricingUnit)?.nameMy ?? p.pricingUnit,
+        ...base, price_ks: yd.unitPriceKs, wholesale_price_ks: yd.wholesalePriceKs, wholesale_min: yd.wholesaleMin,
         width_inches: p.widthTenths ? formatInches(p.widthTenths) : '', barcode: code(p.id!), [STOCK_COL]: formatLargestFirst(left, units, 'my'),
       })
     } else {
@@ -94,14 +46,20 @@ export function Import() {
   const { t } = useTranslation()
   const settings = useSettings()
   const fileRef = useRef<HTMLInputElement>(null)
-  const [parsed, setParsed] = useState<{ products: ParsedProduct[]; errors: ImportError[] }>()
+  const [parsed, setParsed] = useState<{ products: ParsedProduct[]; errors: ImportError[]; missing: string[] }>()
+  const [remove, setRemove] = useState(true)
   const [msg, setMsg] = useState<{ ok: boolean; text: string }>()
   const [busy, setBusy] = useState(false)
+
+  async function save(rows: Row[], filename: string, header?: typeof DETAILS) {
+    const lists = { categories: (await db.categories.orderBy('sort').toArray()).map((c) => c.nameMy) }
+    download(new Blob([await buildBook(rows, lists, header)], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), filename)
+  }
 
   async function downloadAll() {
     if (!settings) return
     await audit('export.excel', 'products')
-    writeBook(await productRows(settings.units), `u-ahi-products-${new Date().toISOString().slice(0, 10)}.xlsx`)
+    await save(await productRows(settings.units), `u-ahi-products-${new Date().toISOString().slice(0, 10)}.xlsx`)
   }
 
   async function pick(file?: File) {
@@ -111,7 +69,16 @@ export function Import() {
       const wb = XLSX.read(await file.arrayBuffer())
       const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(wb.Sheets[wb.SheetNames[0]], { defval: '' })
       const p = parseImport(rows, settings.units)
-      setParsed({ ...p, products: await matchExisting(p.products) })
+      const products = await matchExisting(p.products)
+      // Only a sheet downloaded from the app (it has product numbers) can delete: a file of new products deletes nothing.
+      const gone = p.products.some((x) => x.id) ? await missingFrom(products) : { products: [], variants: [] }
+      const names = new Map((await db.products.toArray()).map((x) => [x.id, x.nameMy]))
+      const missing = [
+        ...gone.products.map((x) => x.nameMy),
+        ...gone.variants.map((v) => `${names.get(v.productId)} (${[v.size, v.colour].filter(Boolean).join(' · ')})`),
+      ]
+      setRemove(true)
+      setParsed({ ...p, products, missing })
     } catch (e) {
       setMsg({ ok: false, text: `${t('import.badFile')} (${String(e)})` })
     }
@@ -122,9 +89,9 @@ export function Import() {
     if (!parsed) return
     setBusy(true)
     try {
-      const n = await importProducts(parsed.products)
+      const n = await importProducts(parsed.products, remove && parsed.missing.length > 0)
       setParsed(undefined)
-      setMsg({ ok: true, text: t('import.doneUpdate', n) })
+      setMsg({ ok: true, text: [t('import.doneUpdate', n), n.removed + n.hidden > 0 && t('import.doneRemove', n)].filter(Boolean).join(' · ') })
     } catch (e) {
       setMsg({ ok: false, text: String(e) })
     } finally {
@@ -145,7 +112,7 @@ export function Import() {
         <Btn variant="plain" className="w-full" onClick={downloadAll} data-testid="download-products">
           ⬇ {t('import.downloadAll')}
         </Btn>
-        <Btn variant="plain" className="w-full" onClick={downloadTemplate}>
+        <Btn variant="plain" className="w-full" onClick={() => save(EXAMPLES, 'u-ahi-products-template.xlsx', DETAILS)}>
           ⬇ {t('import.template')}
         </Btn>
         <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={(e) => pick(e.target.files?.[0])} />
@@ -176,6 +143,20 @@ export function Import() {
                   ))}
                 </ul>
               </>
+            )}
+            {parsed.missing.length > 0 && (
+              <div className="mt-3 rounded-xl border-2 border-red-300 bg-red-50 p-3">
+                <p className="text-xl font-bold text-red-800">{t('import.missing', { count: parsed.missing.length })}</p>
+                <ul className="max-h-48 list-disc overflow-auto pl-8 text-lg">
+                  {parsed.missing.map((name, i) => (
+                    <li key={i}>{name}</li>
+                  ))}
+                </ul>
+                <label className="mt-2 flex items-center gap-3 text-xl">
+                  <input type="checkbox" className="h-8 w-8" checked={remove} onChange={(e) => setRemove(e.target.checked)} data-testid="import-remove" />
+                  {t('import.removeMissing')}
+                </label>
+              </div>
             )}
             <Btn variant="ok" className="mt-4 w-full" disabled={busy || parsed.errors.length > 0 || !parsed.products.length} onClick={run}>
               {t('import.run')}

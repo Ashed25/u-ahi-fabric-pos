@@ -13,7 +13,7 @@ test('owner adds a fabric and a shirt, links a supplier barcode, scans it, previ
   await page.getByRole('button', { name: /ပစ္စည်းအသစ်/ }).click()
   await page.getByRole('button', { name: /အလျားဖြင့် ရောင်းမည်/ }).click()
   await page.getByLabel('အမည် (မြန်မာ)').fill('ပိုးထည် အပြာ')
-  await page.getByLabel('ယူနစ်တစ်ခု ဈေး (ကျပ်)').fill('8,000')
+  await page.getByLabel('တစ်ကိုက် ဈေး (ကျပ်)').fill('8,000')
   await page.getByRole('button', { name: 'သိမ်းရန်' }).click()
   // Saved -> stays on the product with its generated EAN-13
   await expect(page.getByText('ဆိုင်ထုတ်')).toBeVisible()

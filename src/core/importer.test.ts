@@ -21,14 +21,14 @@ describe('Excel import parser', () => {
     ])
   })
 
-  it('parses fabric with pricing unit and width', () => {
+  it('parses fabric priced per yard, with width', () => {
     const { products, errors } = parse([
       { type: 'length', name_my: 'ပိုးထည် အပြာ', category: 'ပိုး', price_ks: 8000, width_inches: '58.4' },
-      { type: 'အလျား', name_my: 'ချည်ထည်', price_ks: 4000, pricing_unit: 'တောင်', width_inches: 45 },
+      { type: 'အလျား', name_my: 'ချည်ထည်', price_ks: 4000, pricing_unit: 'ကိုက်', width_inches: 45 }, // older sheet with the column
     ])
     expect(errors).toEqual([])
     expect(products[0]).toMatchObject({ kind: 'length', pricingUnit: 'gaik', unitPriceKs: 8000, widthTenths: 584 })
-    expect(products[1]).toMatchObject({ pricingUnit: 'taung', unitPriceKs: 4000, widthTenths: 450 })
+    expect(products[1]).toMatchObject({ pricingUnit: 'gaik', unitPriceKs: 4000, widthTenths: 450 })
   })
 
   it('skips blank lines and reports bad rows with Excel row numbers', () => {
@@ -39,7 +39,7 @@ describe('Excel import parser', () => {
       { type: 'piece', name_my: '', price_ks: 1000 },
       { type: 'piece', name_my: 'C', price_ks: 'free' },
       { type: 'length', name_my: 'D', price_ks: 1000, pricing_unit: 'metre' },
-      { type: 'length', name_my: 'E', price_ks: 1000, pricing_unit: 'လက်မဝက်' }, // not a pricing unit
+      { type: 'length', name_my: 'E', price_ks: 1000, pricing_unit: 'တောင်' }, // fabric is priced per yard only
       { type: 'piece', name_my: 'F', price_ks: 1000, barcode: '12345' },
       { type: 'length', name_my: 'G', price_ks: 1000 },
       { type: 'length', name_my: 'G', price_ks: 1000 },

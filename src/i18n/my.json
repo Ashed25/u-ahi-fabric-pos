@@ -47,8 +47,6 @@
   "product.nameEn": "အမည် (အင်္ဂလိပ်) — မထည့်လည်းရ",
   "product.category": "အမျိုးအစား",
   "product.price": "ဈေးနှုန်း (ကျပ်)",
-  "product.pricingUnit": "ဘာနဲ့ ဈေးသတ်မှတ်မလဲ",
-  "product.pricePerUnit": "ယူနစ်တစ်ခု ဈေး (ကျပ်)",
   "product.width": "အနံ",
   "product.customWidth": "အခြား (လက်မ)",
   "product.quickCuts": "အမြန်ရွေးရန် အလျားများ",
@@ -84,7 +82,6 @@
   "units.nameMy": "မြန်မာ",
   "units.nameEn": "English",
   "units.inches": "လက်မ",
-  "units.pricing": "ဈေးသတ်မှတ်လို့ရ",
   "units.invalid": "အမည်နှင့် လက်မ (ဥပမာ 4.4) မှန်မှန် ထည့်ပါ",
   "scanner.title": "စကန်နာ စမ်းရန်",
   "scanner.hint": "ဘားကုဒ် တစ်ခုခု စကန်ဖတ်ကြည့်ပါ။ ဂဏန်းမှန်မှန် ပေါ်ရင် အဆင်ပြေပါပြီ။",
@@ -513,7 +510,6 @@
   "wholesale.tag": "လက်ကား",
   "wholesale.title": "လက်ကား",
   "wholesale.price": "လက်ကား ဈေး တစ်ထည် (ကျပ်)",
-  "wholesale.pricePerUnit": "လက်ကား ဈေး ယူနစ်တစ်ခု (ကျပ်)",
   "wholesale.minPieces": "အနည်းဆုံး အထည်ရေ",
   "wholesale.minUnits": "အနည်းဆုံး အလျား ({{unit}})",
   "wholesale.hintPieces": "ဤပစ္စည်း၏ အရွယ်/အရောင် အားလုံးကို တစ်ခါရောင်းတွင် ပေါင်းရေတွက်သည်။ လက်ကား မရှိရင် အလွတ်ထားပါ။",
@@ -611,5 +607,10 @@
   "audit.f_opening": "နေ့စ ငွေ",
   "audit.f_expected": "ရှိသင့်သော ငွေ",
   "audit.f_counted": "ရေတွက်ရသော ငွေ",
-  "audit.f_units": "အလျား ယူနစ်များ"
+  "audit.f_units": "အလျား ယူနစ်များ",
+  "import.missing": "ဖိုင်ထဲ မပါတော့သော {{count}} ခု (အကြောင်း ဖျက်ထားသည်)",
+  "import.removeMissing": "ဆိုင်ထဲမှ ဖျက်မည် (ရောင်းဖူးသော ပစ္စည်းကို မရောင်း အဖြစ် ဖျောက်ထားမည်)",
+  "import.doneRemove": "{{removed}} ခု ဖျက်ပြီး၊ {{hidden}} ခု ဖျောက်ပြီး",
+  "product.pricePerYard": "တစ်ကိုက် ဈေး (ကျပ်)",
+  "wholesale.pricePerYard": "လက်ကား ဈေး တစ်ကိုက် (ကျပ်)"
 }

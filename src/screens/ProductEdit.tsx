@@ -2,7 +2,9 @@ import { type ReactNode, useEffect, useRef, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useTranslation } from 'react-i18next'
 import { type EnteredLength, formatEntered, formatInches } from '../core/length'
+import { perYard } from '../core/pricing'
 import { DEFAULT_QUICK_CUTS, deleteProduct, removeBarcode, saveProduct } from '../db/products'
+import { getSetting } from '../db/settings'
 import { type Barcode, type Product, type Variant, db } from '../db/schema'
 import { useSettings } from '../db/useSettings'
 import { BarcodeSvg } from '../ui/BarcodeSvg'
@@ -55,7 +57,9 @@ export function ProductEdit({ id }: { id?: number }) {
   useEffect(() => {
     let cancelled = false
     ;(async () => {
-      const prod = id ? await db.products.get(id) : blank('piece')
+      const found = id ? await db.products.get(id) : blank('piece')
+      // Fabric is priced per yard only: an older per-taung (etc.) fabric opens converted and is saved per yard.
+      const prod = found?.kind === 'length' ? { ...found, ...perYard(found, await getSetting('units')) } : found
       const vs = id ? await db.variants.where('productId').equals(id).toArray() : [{ productId: 0, qty: 0 }]
       if (cancelled || !prod) return
       setP(prod)
@@ -202,22 +206,9 @@ export function ProductEdit({ id }: { id?: number }) {
 
         {p.kind === 'length' && (
           <>
-            <div className="grid grid-cols-2 gap-3">
-              <Field label={t('product.pricingUnit')}>
-                <select className={inputCls} value={p.pricingUnit} onChange={(e) => set({ pricingUnit: e.target.value })}>
-                  {settings.units
-                    .filter((u) => u.pricing)
-                    .map((u) => (
-                      <option key={u.code} value={u.code}>
-                        {lang === 'en' ? u.nameEn : u.nameMy}
-                      </option>
-                    ))}
-                </select>
-              </Field>
-              <Field label={t('product.pricePerUnit')}>
-                <input className={inputCls} inputMode="numeric" value={price} onChange={(e) => setPrice(e.target.value)} />
-              </Field>
-            </div>
+            <Field label={t('product.pricePerYard')}>
+              <input className={inputCls} inputMode="numeric" value={price} onChange={(e) => setPrice(e.target.value)} />
+            </Field>
             <Field label={t('product.width')}>
               <div className="flex flex-wrap gap-2">
                 {WIDTH_PRESETS.map((w) => (
@@ -323,10 +314,10 @@ export function ProductEdit({ id }: { id?: number }) {
 
         <Section title={t('wholesale.title')}>
           <div className="grid grid-cols-2 gap-3">
-            <Field label={t(p.kind === 'piece' ? 'wholesale.price' : 'wholesale.pricePerUnit')}>
+            <Field label={t(p.kind === 'piece' ? 'wholesale.price' : 'wholesale.pricePerYard')}>
               <input className={inputCls} inputMode="numeric" value={wsPrice} onChange={(e) => setWsPrice(e.target.value)} data-testid="ws-price" />
             </Field>
-            <Field label={p.kind === 'piece' ? t('wholesale.minPieces') : t('wholesale.minUnits', { unit: unitName(settings.units, p.pricingUnit ?? 'gaik', lang) })}>
+            <Field label={p.kind === 'piece' ? t('wholesale.minPieces') : t('wholesale.minUnits', { unit: unitName(settings.units, 'gaik', lang) })}>
               <input className={inputCls} inputMode="numeric" value={wsMin} onChange={(e) => setWsMin(e.target.value)} data-testid="ws-min" />
             </Field>
           </div>
